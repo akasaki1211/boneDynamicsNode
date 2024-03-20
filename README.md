@@ -88,7 +88,7 @@ Pre-built `boneDynamicsNode.mll` in the [plug-ins](./plug-ins) folder. Install t
 |---|---|
 |Maya 2022 Update 5 win64|preparing...|
 |Maya 2023 Update 3 win64|preparing...|
-|Maya 2024 Update 2 win64|[Download](./plug-ins/2024/colDetectionNode.mll)|
+|Maya 2024 Update 2 win64|[Download](./plug-ins/2024/boneDynamicsNode.mll)|
 
 ## TODO
 - [ ] Angle Limit  
