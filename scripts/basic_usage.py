@@ -4,6 +4,10 @@ cmds.loadPlugin("boneDynamicsNode.mll", qt=True)
 
 def create_dynamics_node(bone, end):
 
+    if not bone in cmds.listRelatives(end, p=True):
+        print("Exit: {} is not {}'s parent.".format(bone, end))
+        return
+
     boneDynamicsNode = cmds.createNode("boneDynamicsNode")
 
     cmds.connectAttr('time1.outTime', boneDynamicsNode + '.time', force=True)
@@ -21,6 +25,8 @@ if __name__ == "__main__":
     
     # Select in order from root to tip of the joint-chain
     joints = cmds.ls(sl=True)
+
+    # ---------------------------------------------------
 
     set_name = "boneDynamicsNodeSet"
     if not cmds.objExists(set_name):
