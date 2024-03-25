@@ -377,7 +377,8 @@ MStatus boneDynamicsNode::initialize()
 
 MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
 {
-    if (plug != s_outputRotate)
+    const MPlug computePlug = plug.isChild() ? plug.parent() : plug;
+    if (computePlug != s_outputRotate)
     {
         return MS::kUnknownParameter;
     }
