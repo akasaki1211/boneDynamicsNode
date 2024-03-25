@@ -1,9 +1,12 @@
 # boneDynamicsNode
-
-A custom node that applies bone dynamics for one section. Multiple nodes are used in a chain.  
+![Maya](https://img.shields.io/static/v1?message=Maya&color=0696D7&logo=Autodesk&logoColor=white&label=) ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)  
+A custom node that applies dynamics to one section of a joint chain. It can be included directly into the rig, or Bake & Purge over the rig.  
 
 > ⚠**Warning**⚠  
 > Internal Use ID `0x7b001` is used.
+
+## Installaion  
+Just put the [pre-built mll](#Pre-built-plug-ins) in `C:\Users\<USERNAME>\Documents\maya\<MAYAVERSION>\plug-ins`.
 
 ## Basic Usage
 Create any joint chain and connect the `boneDynamicsNode` per section. The minimum required connections are as follows:
@@ -127,6 +130,22 @@ Pre-built `boneDynamicsNode.mll` in the [plug-ins](./plug-ins) folder. Install t
 |Maya 2022 Update 5 win64|[Download](./plug-ins/2022/boneDynamicsNode.mll)|
 |Maya 2023 Update 3 win64|[Download](./plug-ins/2023/boneDynamicsNode.mll)|
 |Maya 2024 Update 2 win64|[Download](./plug-ins/2024/boneDynamicsNode.mll)|
+
+## Build  
+> For example, Maya 2024 in Windows
+1. Install Visual Studio 2022
+2. Install CMake 3.22.1 or higher
+3. Donwload SDKs from [Maya API | Autodesk Platform Services (APS)](https://aps.autodesk.com/developer/overview/maya)
+4. Set `devkitBase` path in the `DEVKIT_LOCATION` environment variable.  
+5. Generate a project with the following command:
+```
+cd src
+cmake . -Bbuild_2024 -G "Visual Studio 17 2022" -A x64
+```
+6. Build with Visual Studio or with the following command:
+```
+cmake --build build_2024
+```
 
 ## TODO
 - [ ] Angle Limit  
