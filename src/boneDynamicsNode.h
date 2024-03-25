@@ -79,7 +79,6 @@ private:
     //static double getFPS();
     bool m_init;
     MMatrix m_prevOffsetMatrix;
-    MVector m_nextPosition;
     MVector m_position;
     MVector m_velocity;
 };
