@@ -464,7 +464,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     
     // reset(init)
     if (time <= resetTime || m_init) {
-        m_prevOffsetMatrix = MMatrix();
+        m_prevOffsetMatrix = offsetMatrix;
         m_position = endWorldTranslate;
         m_velocity = MVector(0.0, 0.0, 0.0);
         m_init = false;
