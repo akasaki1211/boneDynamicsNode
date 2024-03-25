@@ -6,7 +6,7 @@ A custom node that applies dynamics to one section of a joint chain. It can be i
 > Internal Use ID `0x7b001` is used.
 
 ## Installaion  
-Just put the [pre-built mll](#Pre-built-plug-ins) in `C:\Users\<USERNAME>\Documents\maya\<MAYAVERSION>\plug-ins`.
+Just put the [boneDynamicsNode.mll](#Pre-built-plug-ins) in `C:\Users\<USERNAME>\Documents\maya\<MAYAVERSION>\plug-ins`.
 
 ## Basic Usage
 Create any joint chain and connect the `boneDynamicsNode` per section. The minimum required connections are as follows:
@@ -45,7 +45,7 @@ Let's move the current frame to 1 or later and move the root. The joint-chain sh
 - `Elasticity` : Force to return to the original posture.  
 - `Stiffness` : Suppresses changes between frames (steps). Setting to 1 will result in loss of motion.  
 - `Mass` : Affects the force to return to the original posture.  
-- `Gravity` : If Y-up and the unit is in centimeters, it is [0,-980,0].  
+- `Gravity` : If Y-up and the unit is in centimeters, set [0,-980,0].  
 - `Gravity Multiply` : Will be multiplied by Gravity.  
 
 ### Bake to Keyframes
@@ -68,7 +68,7 @@ All of the following checks can be satisfied by creating joints as usual.
 ![collisions](.images/collisions.gif)
 
 - `Radius` : Radius of the end-joint.  
-- `Iterations` : Higher values increase the accuracy of collisions. Recommended value is 3 to 5.  
+- `Iterations` : Higher values increase the accuracy of collisions. Recommended value is 3 to 5. 0 disables collisionss.  
 - `Enable Ground Col` : Enable ground collision.  
 - `Ground Height` : Height of the ground.  
 - `Sphere Col Matrix` : Connect the sphere collider worldMatrix.  
@@ -95,7 +95,7 @@ The converging pose can be manipulated by duplicating the joint-chain and connec
 
 ### Offset Transform
 
-You can cancel the transform by connecting the worldMatrix of the node you do not want affected (such as the root controller of your character) to the `Offset Matrix`.
+You can cancel the transform by connecting the worldMatrix of the node you do not want affected (such as the root controller of character) to the `Offset Matrix`.
 
 ![offset_matrix](.images/offset_matrix.gif)
 
@@ -103,6 +103,7 @@ You can cancel the transform by connecting the worldMatrix of the node you do no
 
 ### Supports Scale per Section
 Connecting each scale value to `Bone Scale`, `Bone Inverse Scale`, and `End Scale` enables a scale per section.  
+> ⚠Please avoid non-uniform scales.  
 
 ![scale](.images/scale.gif)
 
@@ -117,7 +118,7 @@ Branching is possible, but good results are obtained with joints like the one on
 ![branching_skeleton](.images/branching_skeleton.png)
 
 > 💡**Sample Script**  
-> [advanced_usage.py](scripts/advanced_usage.py) is a script that connects a bonedynamicsNode to an arbitrary chain of joints. It is executed by selecting each joint in turn from root to tip.  
+> [advanced_usage.py](scripts/advanced_usage.py) is a script to connect bonedynamicsNode to any joint chain. Please select and execute them in order from the root of the joint to the tip of the joint.  
 > - Enable per-section scaling.  
 > - If place the collider created by expcol as a child of 'collider_grp', to be connected.  
 > - If duplicate the joint-chain to be simulated and add '_target' to the end of the name, to allow manipulation of the target posture.  
