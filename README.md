@@ -6,7 +6,8 @@ A custom node that applies dynamics to one section of a joint chain. It can be i
 > Internal Use ID `0x7b001` is used.
 
 ## Installaion  
-Just put the [boneDynamicsNode.mll](#Pre-built-plug-ins) in `C:\Users\<USERNAME>\Documents\maya\<MAYAVERSION>\plug-ins`.
+1. Put [boneDynamicsNode.mll](#Pre-built-plug-ins) in `C:\Users\<USERNAME>\Documents\maya\<MAYAVERSION>\plug-ins`.  
+2. Load "boneDynamicsNode.mll" from Plug-in Manager.  
 
 ## Basic Usage
 Create any joint chain and connect the `boneDynamicsNode` per section. The minimum required connections are as follows:
@@ -52,13 +53,15 @@ Let's move the current frame to 1 or later and move the root. The joint-chain sh
 Select the joint and execute "Bake Simulation" from the "Key" menu. Then delete the boneDynamicsNode.  
 
 ### Requirements for Joint
-All of the following checks can be satisfied by creating joints as usual.  
 - Rotate should be [0,0,0], with only the Joint Orient having a value.
 - Do not edit rotatePivot, rotatePivotTranslate, scalePivot, or scalePivotTranslate.  
 - Rotate Oeder is only available for xyz.  
 - Rotate Axis should remain [0,0,0].  
 - Leave Inherits Transform checked.  
+- Leave Offset Parent Matrix at its default value.  
 - Receive InverseScale from the parent Scale and leave Segment Scale Compensate checked. Shear not supported.  
+
+All of the above checkpoints can be satisfied by making joints as usual.  
 
 ## Features
 ### Collisions
@@ -84,6 +87,10 @@ The attributes that connect the collider are in a list, so you can use more than
 > 💡**Visualize Radius**  
 > Place a nurbsSphere or implicitSphere as a child of end-joint and connect `Radius`.  
 > ![visualize_radius](.images/visualize_radius.png)
+
+> 💡**Note**  
+> Colliders do not necessarily need to use [expcol](https://github.com/akasaki1211/maya_expressionCollision). It can be anything as long as the required attributes are connected.  
+> ![collider_note](.images/collider_note.gif)  
 
 ### Specify Target Pose
 
@@ -132,8 +139,8 @@ Pre-built `boneDynamicsNode.mll` in the [plug-ins](./plug-ins) folder. Install t
 |Maya 2023 Update 3 win64|[Download](./plug-ins/2023/boneDynamicsNode.mll)|
 |Maya 2024 Update 2 win64|[Download](./plug-ins/2024/boneDynamicsNode.mll)|
 
-## Build  
-> For example, Maya 2024 in Windows
+## How to Build  
+For example, Maya 2024 in Windows:  
 1. Install Visual Studio 2022
 2. Install CMake 3.22.1 or higher
 3. Donwload SDKs from [Maya API | Autodesk Platform Services (APS)](https://aps.autodesk.com/developer/overview/maya)
