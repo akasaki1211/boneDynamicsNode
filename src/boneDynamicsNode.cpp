@@ -469,7 +469,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         m_velocity = MVector();
         m_init = false;
         
-        outputRotateHandle.set3Double(0.0, 0.0, 0.0);
+        outputRotateHandle.set3Double(rotationOffsetEuler.x, rotationOffsetEuler.y, rotationOffsetEuler.z);
 
         data.setClean(plug);
         
