@@ -155,6 +155,11 @@ cmake . -Bbuild_2024 -G "Visual Studio 17 2022" -A x64
 cmake --build build_2024
 ```
 
+## Known Issues
+- Not compute when connected to child plug.
+- Offset Matrix is not reset properly at Reset Time.
+- Rotation Offset is not reflected at Reset Time.
+
 ## TODO
 - [ ] Angle Limit  
 - [ ] Additional Force  
