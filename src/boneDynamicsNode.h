@@ -42,9 +42,6 @@ public:
     static MObject s_boneInverseScale;  // use to calculate "End World Translate" and scale "Radius"
     static MObject s_endScale;          // use to scale "Radius"
 
-    // radius
-    static MObject s_radius;            // radius
-
     // dynamics
     static MObject s_damping;           // velocity damping
     static MObject s_elasticity;        // spring coefficient
@@ -52,7 +49,15 @@ public:
     static MObject s_mass;
     static MObject s_gravity;           // gravity vector
     static MObject s_gravityMultiply;
-    
+
+    // angle limit
+    static MObject s_enableAngleLimit;  // use angle limit
+    static MObject s_limitAngle;        // limit angle
+
+    // radius
+    static MObject s_radius;            // radius
+
+    // iterations
     static MObject s_iterations;        // iterations of constraints
 
     // collisions
@@ -77,6 +82,10 @@ public:
 
 private:
     //static double getFPS();
+    double degToRad(double deg);
+    MVector angleLimitation(const MVector pivot, const MVector a, MVector b, const double limitAngle);
+    MVector distanceConstraint(MVector pivot, MVector point, double distance);
+    
     bool m_init;
     MMatrix m_prevOffsetMatrix;
     MVector m_position;
