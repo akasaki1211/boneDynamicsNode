@@ -8,7 +8,8 @@ def create_dynamics_node(
         scalable=False, 
         target_bone=None, 
         offset_node=None, 
-        colliders=[]
+        colliders=[],
+        visualize=True
     ):
 
     if not bone in cmds.listRelatives(end, p=True):
@@ -39,11 +40,35 @@ def create_dynamics_node(
         if cmds.objExists(offset_node):
             cmds.connectAttr(offset_node + '.worldMatrix[0]', boneDynamicsNode + '.offsetMatrix', f=True)
 
-    if colliders:
-        radius_sphere = cmds.createNode("implicitSphere")
-        cmds.connectAttr(boneDynamicsNode + '.radius', radius_sphere + '.radius', f=True)
-        radius_sphere_tm = cmds.listRelatives(radius_sphere, p=True)[0]
-        cmds.parent(radius_sphere_tm, end, r=True)
+    if visualize:
+        # angle limit
+        angle_cone = cmds.createNode("implicitCone")
+        angle_cone_tm = cmds.listRelatives(angle_cone, p=True)[0]
+        angle_cone_ro = cmds.createNode("transform", n="{}_cone_ro".format(bone))
+        angle_cone_root = cmds.createNode("transform", n="{}_cone_root".format(bone))
+        cmds.setAttr(angle_cone_tm + '.ry', -90)
+        cmds.parent(angle_cone_tm, angle_cone_ro, r=True)
+        cmds.parent(angle_cone_ro, angle_cone_root, r=True)
+        bone_parent = cmds.listRelatives(bone, p=True)
+        if bone_parent:
+            cmds.parent(angle_cone_root, bone_parent[0], r=True)
+        cmds.connectAttr(boneDynamicsNode + '.boneTranslate', angle_cone_root + '.translate', f=True)
+        cmds.connectAttr(boneDynamicsNode + '.boneJointOrient', angle_cone_root + '.rotate', f=True)
+        cmds.connectAttr(boneDynamicsNode + '.rotationOffset', angle_cone_ro + '.rotate', f=True)
+        cmds.connectAttr(boneDynamicsNode + '.enableAngleLimit', angle_cone_root + '.v', f=True)
+        cmds.connectAttr(boneDynamicsNode + '.angleLimit', angle_cone + '.coneAngle', f=True)
+        cmds.setAttr(angle_cone + '.coneCap', 2)
+        cmds.setAttr(angle_cone_tm + '.overrideEnabled', 1)
+        cmds.setAttr(angle_cone_tm + '.overrideDisplayType', 2)
+
+        # collision radius
+        if colliders:
+            radius_sphere = cmds.createNode("implicitSphere")
+            cmds.connectAttr(boneDynamicsNode + '.radius', radius_sphere + '.radius', f=True)
+            radius_sphere_tm = cmds.listRelatives(radius_sphere, p=True)[0]
+            cmds.parent(radius_sphere_tm, end, r=True)
+            cmds.setAttr(radius_sphere_tm + '.overrideEnabled', 1)
+            cmds.setAttr(radius_sphere_tm + '.overrideDisplayType', 2)
     
     sphere_col_idx = 0
     capsule_col_idx = 0
@@ -116,7 +141,8 @@ if __name__ == "__main__":
             scalable=scalable, 
             target_bone=bone+target_bone_postfix, 
             offset_node=offset_node_name, 
-            colliders=colliders
+            colliders=colliders,
+            visualize=True
         )
 
         if boneDynamicsNode:
