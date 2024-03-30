@@ -34,14 +34,17 @@ MObject boneDynamicsNode::s_boneScale;
 MObject boneDynamicsNode::s_boneInverseScale;
 MObject boneDynamicsNode::s_endScale;
 
-MObject boneDynamicsNode::s_radius;
-
 MObject boneDynamicsNode::s_damping;
 MObject boneDynamicsNode::s_elasticity;
 MObject boneDynamicsNode::s_stiffness;
 MObject boneDynamicsNode::s_mass;
 MObject boneDynamicsNode::s_gravityMultiply;
 MObject boneDynamicsNode::s_gravity;
+
+MObject boneDynamicsNode::s_enableAngleLimit;
+MObject boneDynamicsNode::s_angleLimit;
+
+MObject boneDynamicsNode::s_radius;
 
 MObject boneDynamicsNode::s_iterations;
 
@@ -157,10 +160,6 @@ MStatus boneDynamicsNode::initialize()
     s_endScale = nAttr.create("endScale", "es", x, y, z);
     nAttr.setKeyable(true);
 
-    s_radius = nAttr.create("radius", "r", MFnNumericData::kDouble, 0.0);
-    nAttr.setKeyable(true);
-    nAttr.setMin(0);
-
     // dynamics attributes
     s_damping = nAttr.create("damping", "damp", MFnNumericData::kDouble, 0.1);
     nAttr.setKeyable(true);
@@ -190,6 +189,20 @@ MStatus boneDynamicsNode::initialize()
     nAttr.setKeyable(true);
     nAttr.setMin(0);
     nAttr.setMax(1);
+
+    // angle limit
+    s_enableAngleLimit = nAttr.create("enableAngleLimit", "eal", MFnNumericData::kBoolean, false);
+    nAttr.setKeyable(true);
+
+    s_angleLimit = nAttr.create("angleLimit", "al", MFnNumericData::kDouble, 60.0);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0);
+    nAttr.setMax(360);
+
+    // radius
+    s_radius = nAttr.create("radius", "r", MFnNumericData::kDouble, 0.0);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0);
 
     // constraint attributes
     s_iterations = nAttr.create("iterations", "iter", MFnNumericData::kLong, 5);
@@ -284,14 +297,17 @@ MStatus boneDynamicsNode::initialize()
 
     addAttribute(s_rotationOffset);
 
-    addAttribute(s_radius);
-
     addAttribute(s_damping);
     addAttribute(s_elasticity);
     addAttribute(s_stiffness);
     addAttribute(s_mass);
     addAttribute(s_gravity);
     addAttribute(s_gravityMultiply);
+
+    addAttribute(s_enableAngleLimit);
+    addAttribute(s_angleLimit);
+
+    addAttribute(s_radius);
 
     addAttribute(s_iterations);
 
@@ -332,14 +348,17 @@ MStatus boneDynamicsNode::initialize()
     attributeAffects(s_boneInverseScale, s_outputRotate);
     attributeAffects(s_endScale, s_outputRotate);
     
-    attributeAffects(s_radius, s_outputRotate);
-
     attributeAffects(s_damping, s_outputRotate);
     attributeAffects(s_elasticity, s_outputRotate);
     attributeAffects(s_stiffness, s_outputRotate);
     attributeAffects(s_mass, s_outputRotate);
     attributeAffects(s_gravity, s_outputRotate);
     attributeAffects(s_gravityMultiply, s_outputRotate);
+
+    attributeAffects(s_enableAngleLimit, s_outputRotate);
+    attributeAffects(s_angleLimit, s_outputRotate);
+
+    attributeAffects(s_radius, s_outputRotate);
 
     attributeAffects(s_iterations, s_outputRotate);
 
@@ -375,17 +394,55 @@ MStatus boneDynamicsNode::initialize()
     return fps;
 }*/
 
+double boneDynamicsNode::degToRad(double deg)
+{
+    return deg * (M_PI / 180);
+}
+
+void boneDynamicsNode::angleLimit(const MVector& pivot, const MVector& a, MVector& b, const double limitAngle)
+{
+    const MVector initVec = a - pivot;
+    const MVector currentVec = b - pivot;
+    const MQuaternion quat(initVec, currentVec);
+
+    MVector axis;
+    double currentAngle;
+    quat.getAxisAngle(axis, currentAngle);
+
+    if (currentAngle > limitAngle)
+    {
+        const double rotateAngle = limitAngle - currentAngle;
+
+        const MVector axisNormal = axis.normal();
+        const double d = currentVec * axisNormal;
+        const MVector projectVec = axisNormal * d;
+        const MVector orthogonalVec = currentVec - projectVec;
+
+        // rotate vector around axis
+        const MVector rotatedVec = projectVec + orthogonalVec * cos(rotateAngle) + (axisNormal ^ orthogonalVec) * sin(rotateAngle);
+
+        // update position
+        b = pivot + rotatedVec;
+    }
+}
+
+MVector boneDynamicsNode::distanceConstraint(const MVector& pivot, const MVector& point, double distance)
+{
+    return pivot + ((point - pivot).normal() * distance);
+}
+
 MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
 {
-    if (plug != s_outputRotate)
+    const MPlug computePlug = plug.isChild() ? plug.parent() : plug;
+    if (computePlug != s_outputRotate)
     {
         return MS::kUnknownParameter;
     }
 
     // output data handles
-    MDataHandle outputRotateHandle = data.outputValue(s_outputRotate);
+    MDataHandle& outputRotateHandle = data.outputValue(s_outputRotate);
     
-    bool enable = data.inputValue(s_enable).asBool();
+    const bool enable = data.inputValue(s_enable).asBool();
     if (!enable)
     {
         //return MS::kUnknownParameter;
@@ -397,78 +454,86 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     }
 
     // input values
-    MMatrix offsetMatrix = data.inputValue(s_offsetMatrix).asMatrix();
+    const MMatrix& offsetMatrix = data.inputValue(s_offsetMatrix).asMatrix();
 
-    MVector boneTranslate = data.inputValue(s_boneTranslate).asVector();
-    MVector boneJointOrient = data.inputValue(s_boneJointOrient).asVector();
-    MMatrix boneParentMatrix = data.inputValue(s_boneParentMatrix).asMatrix();
-    MMatrix boneParentInverseMatrix = data.inputValue(s_boneParentInverseMatrix).asMatrix();
-    MVector boneScale = data.inputValue(s_boneScale).asVector();
-    MVector boneInverseScaleInput = data.inputValue(s_boneInverseScale).asVector();
-    MVector boneInverseScale(1.0 / boneInverseScaleInput.x, 1.0 / boneInverseScaleInput.y, 1.0 / boneInverseScaleInput.z);
+    const MVector& boneTranslate = data.inputValue(s_boneTranslate).asVector();
+    const MVector& boneJointOrient = data.inputValue(s_boneJointOrient).asVector();
+    const MMatrix& boneParentMatrix = data.inputValue(s_boneParentMatrix).asMatrix();
+    const MMatrix& boneParentInverseMatrix = data.inputValue(s_boneParentInverseMatrix).asMatrix();
+    const MVector& boneScale = data.inputValue(s_boneScale).asVector();
+    const MVector& boneInverseScaleInput = data.inputValue(s_boneInverseScale).asVector();
+    const MVector boneInverseScale(1.0 / boneInverseScaleInput.x, 1.0 / boneInverseScaleInput.y, 1.0 / boneInverseScaleInput.z);
     
-    MVector endTranslate = data.inputValue(s_endTranslate).asVector();
-    MVector endScale = data.inputValue(s_endScale).asVector();
+    const MVector& endTranslate = data.inputValue(s_endTranslate).asVector();
+    const MVector& endScale = data.inputValue(s_endScale).asVector();
 
-    MVector rotationOffset = data.inputValue(s_rotationOffset).asVector();
+    const MVector& rotationOffset = data.inputValue(s_rotationOffset).asVector();
 
     // get rotation offset matrix
-    MEulerRotation rotationOffsetEuler(rotationOffset, MEulerRotation::RotationOrder::kXYZ); // Specified xyz
-    MMatrix roMatrix = rotationOffsetEuler.asMatrix();
-    MMatrix roInverseMatrix = roMatrix.inverse();
+    const MEulerRotation rotationOffsetEuler(rotationOffset, MEulerRotation::RotationOrder::kXYZ); // Specified xyz
+    const MMatrix roMatrix = rotationOffsetEuler.asMatrix();
+    MMatrix roInverseMatrix;
+    if (!roMatrix.isEquivalent(MMatrix::identity))
+    {
+        roInverseMatrix = roMatrix.inverse();
+    }
 
     // get joint orient matrix
-    MEulerRotation boneJointOrientEuler(boneJointOrient, MEulerRotation::RotationOrder::kXYZ); // Specified xyz
-    MMatrix joMatrix = boneJointOrientEuler.asMatrix();
-    MMatrix joInverseMatrix = joMatrix.inverse();
+    const MEulerRotation boneJointOrientEuler(boneJointOrient, MEulerRotation::RotationOrder::kXYZ); // Specified xyz
+    const MMatrix joMatrix = boneJointOrientEuler.asMatrix();
+    MMatrix joInverseMatrix;
+    if (!joMatrix.isEquivalent(MMatrix::identity))
+    {
+        joInverseMatrix = joMatrix.inverse();
+    }
 
     // get bone matrix
     MTransformationMatrix boneTransformationMatrix;
     boneTransformationMatrix.setTranslation(boneTranslate, MSpace::kWorld);
-    MMatrix boneMatrix = boneTransformationMatrix.asMatrix();
+    const MMatrix boneMatrix = boneTransformationMatrix.asMatrix();
     
     // calc bone world position
-    MPoint boneWorldTranslatePoint = MPoint(boneTranslate) * boneParentMatrix;
-    MVector boneWorldTranslate(boneWorldTranslatePoint);
+    const MPoint boneWorldTranslatePoint = MPoint(boneTranslate) * boneParentMatrix;
+    const MVector boneWorldTranslate(boneWorldTranslatePoint);
 
     // calc end world position
-    MPoint scaledEndTranslate(
+    const MPoint scaledEndTranslate(
         endTranslate.x * boneScale.x * boneInverseScale.x, 
         endTranslate.y * boneScale.y * boneInverseScale.y, 
         endTranslate.z * boneScale.z * boneInverseScale.z
     );
-    MPoint endWorldTranslatePoint = scaledEndTranslate * roMatrix * joMatrix * boneMatrix * boneParentMatrix;
-    MVector endWorldTranslate(endWorldTranslatePoint);
+    const MPoint endWorldTranslatePoint = scaledEndTranslate * roMatrix * joMatrix * boneMatrix * boneParentMatrix;
+    const MVector endWorldTranslate(endWorldTranslatePoint);
 
     // radius
     double radius = data.inputValue(s_radius).asDouble();
-    MTransformationMatrix boneParentTransformationMatrix(boneParentMatrix);
+    const MTransformationMatrix boneParentTransformationMatrix(boneParentMatrix);
     double boneParentScale[3];
     boneParentTransformationMatrix.getScale(boneParentScale, MSpace::kWorld);
-    radius *= endScale.z * boneInverseScale.z * boneParentScale[2]; // Specified by z-axis
+    radius *= endScale.z * boneInverseScale.z * boneParentScale[2]; // Specified by scale Z
 
     // bone length
-    double distance = (endWorldTranslate - boneWorldTranslate).length();
+    const double distance = (endWorldTranslate - boneWorldTranslate).length();
 
     // dynamics
-    double damping = data.inputValue(s_damping).asDouble();
-    double elasticity = data.inputValue(s_elasticity).asDouble();
-    double stiffness = data.inputValue(s_stiffness).asDouble();
-    double mass = data.inputValue(s_mass).asDouble();
-    double gravityMultiply = data.inputValue(s_gravityMultiply).asDouble();
-    MVector gravity = data.inputValue(s_gravity).asVector();
+    const double damping = data.inputValue(s_damping).asDouble();
+    const double elasticity = data.inputValue(s_elasticity).asDouble();
+    const double stiffness = data.inputValue(s_stiffness).asDouble();
+    const double mass = data.inputValue(s_mass).asDouble();
+    const double gravityMultiply = data.inputValue(s_gravityMultiply).asDouble();
+    const MVector& gravity = data.inputValue(s_gravity).asVector();
     
-    MTime time = data.inputValue(s_time).asTime();
-    MTime resetTime = data.inputValue(s_resetTime).asTime();
+    const MTime& time = data.inputValue(s_time).asTime();
+    const MTime& resetTime = data.inputValue(s_resetTime).asTime();
     
     // reset(init)
     if (time <= resetTime || m_init) {
-        m_prevOffsetMatrix = MMatrix();
+        m_prevOffsetMatrix = offsetMatrix;
         m_position = endWorldTranslate;
-        m_velocity = MVector(0.0, 0.0, 0.0);
+        m_velocity = MVector();
         m_init = false;
         
-        outputRotateHandle.set3Double(0.0, 0.0, 0.0);
+        outputRotateHandle.set3Double(rotationOffsetEuler.x, rotationOffsetEuler.y, rotationOffsetEuler.z);
 
         data.setClean(plug);
         
@@ -477,45 +542,47 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
 
     // delta time
     //double dt = 1.0 / getFPS();
-    double fps = data.inputValue(s_fps).asDouble();
-    double dt = 1.0 / fps;
+    const double fps = data.inputValue(s_fps).asDouble();
+    const double dt = 1.0 / fps;
 
     // position offset
-    MPoint offsetedPosition = MPoint(m_position) * m_prevOffsetMatrix.inverse() * offsetMatrix;
+    const MPoint offsetedPosition = MPoint(m_position) * m_prevOffsetMatrix.inverse() * offsetMatrix;
     m_position = MVector(offsetedPosition);
-
+    
     // velocity damping
     m_velocity = m_velocity * (1.0 - damping);
-
+    
     // add velocity
-    m_nextPosition = m_position + (m_velocity * dt);
-
+    MVector nextPosition = m_position + (m_velocity * dt);
+    
     // external force
     MVector external_force;
     // spring
-    external_force += ((endWorldTranslate - m_nextPosition) * elasticity) / mass;
+    external_force += ((endWorldTranslate - nextPosition) * elasticity) / mass;
     // gravity
     external_force += gravity * gravityMultiply;
     // add external force
-    m_nextPosition += external_force * dt * dt;
+    nextPosition += external_force * dt * dt;
     
     // keep position
-    m_nextPosition += (m_position - m_nextPosition) * stiffness;
+    nextPosition += (m_position - nextPosition) * stiffness;
+
+    // angle limit
+    const bool enableAngleLimit = data.inputValue(s_enableAngleLimit).asBool();
+    const double angleLimitDegrees = data.inputValue(s_angleLimit).asDouble();
 
     // collision
-    long iter = data.inputValue(s_iterations).asLong();
+    const bool enableGroundCol = data.inputValue(s_enableGroundCol).asBool();
+    const double groundHeight = data.inputValue(s_groundHeight).asDouble();
 
-    bool enableGroundCol = data.inputValue(s_enableGroundCol).asBool();
-    double groundHeight = data.inputValue(s_groundHeight).asDouble();
-
-    MArrayDataHandle sphereColArrayHandle = data.inputArrayValue(s_sphereCollider);
-    unsigned int scCount = sphereColArrayHandle.elementCount();
+    MArrayDataHandle& sphereColArrayHandle = data.inputArrayValue(s_sphereCollider);
+    const unsigned int scCount = sphereColArrayHandle.elementCount();
         
-    MArrayDataHandle capsuleColArrayHandle = data.inputArrayValue(s_capsuleCollider);
-    unsigned int ccCount = capsuleColArrayHandle.elementCount();
+    MArrayDataHandle& capsuleColArrayHandle = data.inputArrayValue(s_capsuleCollider);
+    const unsigned int ccCount = capsuleColArrayHandle.elementCount();
         
-    MArrayDataHandle iPlaneColArrayHandle = data.inputArrayValue(s_iPlaneCollider);
-    unsigned int pcCount = iPlaneColArrayHandle.elementCount();
+    MArrayDataHandle& iPlaneColArrayHandle = data.inputArrayValue(s_iPlaneCollider);
+    const unsigned int pcCount = iPlaneColArrayHandle.elementCount();
 
     MTransformationMatrix sphereCol_m;
     MVector sphereCol_p;
@@ -530,34 +597,39 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     double capsuleCol_rB;
     MTransformationMatrix iPlaneCol_m;
     MVector iPlaneCol_p;
-    MVector iPlaneCol_n = MVector::yAxis;
+    MVector iPlaneCol_n;
 
     MVector v;
     double r;
 
+    const long iter = data.inputValue(s_iterations).asLong();
+
     for (int i = 0; i < iter; i++)
     {
+        // distance constraint
+        nextPosition = distanceConstraint(boneWorldTranslate, nextPosition, distance);
+        
         //sphere collision
         for (unsigned int i = 0; i < scCount; i++) {
             sphereColArrayHandle.jumpToElement(i);
-            MDataHandle sphereCollider = sphereColArrayHandle.inputValue();
+            MDataHandle& sphereCollider = sphereColArrayHandle.inputValue();
             sphereCol_m = sphereCollider.child(s_sphereColMtx).asMatrix();
             sphereCol_p = sphereCol_m.getTranslation(MSpace::kWorld);
             sphereCol_m.getScale(sphereCol_s, MSpace::kWorld);
             sphereCol_r = sphereCollider.child(s_sphereColRad).asDouble() * sphereCol_s[2];
                 
-            v = m_nextPosition - sphereCol_p;
+            v = nextPosition - sphereCol_p;
             r = sphereCol_r + radius;
             if (v * v < r * r)
             {
-                m_nextPosition = sphereCol_p + (v.normal() * r);
+                nextPosition = sphereCol_p + (v.normal() * r);
             };
         };
 
         //capsule collision
         for (unsigned int i = 0; i < ccCount; i++) {
             capsuleColArrayHandle.jumpToElement(i);
-            MDataHandle capsuleCollider = capsuleColArrayHandle.inputValue();
+            MDataHandle& capsuleCollider = capsuleColArrayHandle.inputValue();
             capsuleCol_mA = capsuleCollider.child(s_capsuleColMtxA).asMatrix();
             capsuleCol_pA = capsuleCol_mA.getTranslation(MSpace::kWorld);
             capsuleCol_mB = capsuleCollider.child(s_capsuleColMtxB).asMatrix();
@@ -566,37 +638,37 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
             capsuleCol_rA = capsuleCollider.child(s_capsuleColRadA).asDouble() * capsuleCol_s[2];
             capsuleCol_rB = capsuleCollider.child(s_capsuleColRadB).asDouble() * capsuleCol_s[2];
                 
-            double h = (capsuleCol_pB - capsuleCol_pA).length();
-            MVector ab = (capsuleCol_pB - capsuleCol_pA).normal();
+            const double h = (capsuleCol_pB - capsuleCol_pA).length();
+            const MVector ab = (capsuleCol_pB - capsuleCol_pA).normal();
 
-            double t = ab * (m_nextPosition - capsuleCol_pA);
-            double ratio = t / h;
+            const double t = ab * (nextPosition - capsuleCol_pA);
+            const double ratio = t / h;
             if (ratio <= 0)
             {
-                v = m_nextPosition - capsuleCol_pA;
+                v = nextPosition - capsuleCol_pA;
                 r = capsuleCol_rA + radius;
                 if (v * v < r * r)
                 {
-                    m_nextPosition = capsuleCol_pA + (v.normal() * r);
+                    nextPosition = capsuleCol_pA + (v.normal() * r);
                 };
             }
             else if (ratio >= 1)
             {
-                v = m_nextPosition - capsuleCol_pB;
+                v = nextPosition - capsuleCol_pB;
                 r = capsuleCol_rB + radius;
                 if (v * v < r * r)
                 {
-                    m_nextPosition = capsuleCol_pB + (v.normal() * r);
+                    nextPosition = capsuleCol_pB + (v.normal() * r);
                 };
             }
             else
             {
-                MVector q = capsuleCol_pA + (ab * t);
-                v = m_nextPosition - q;
+                const MVector q = capsuleCol_pA + (ab * t);
+                v = nextPosition - q;
                 r = radius + (capsuleCol_rA * (1.0 - ratio) + capsuleCol_rB * ratio);
                 if (v * v < r * r)
                 {
-                    m_nextPosition = q + (v.normal() * r);
+                    nextPosition = q + (v.normal() * r);
                 };
             };
         };
@@ -604,47 +676,69 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         //infinite plane collision
         for (unsigned int i = 0; i < pcCount; i++) {
             iPlaneColArrayHandle.jumpToElement(i);
-            MDataHandle iPlaneCollider = iPlaneColArrayHandle.inputValue();
+            MDataHandle& iPlaneCollider = iPlaneColArrayHandle.inputValue();
             iPlaneCol_m = iPlaneCollider.child(s_iPlaneColMtx).asMatrix();
             iPlaneCol_p = iPlaneCol_m.getTranslation(MSpace::kWorld);
-            iPlaneCol_n = MVector::yAxis.transformAsNormal(iPlaneCol_m.asMatrix());
+            iPlaneCol_n = MVector::yAxis.transformAsNormal(iPlaneCol_m.asMatrix()); // Specified by y-axis
                 
-            double distancePointPlane = iPlaneCol_n * (m_nextPosition - iPlaneCol_p);
+            const double distancePointPlane = iPlaneCol_n * (nextPosition - iPlaneCol_p);
             if (distancePointPlane - radius < 0)
             {
-                m_nextPosition = m_nextPosition - (iPlaneCol_n * (distancePointPlane - radius));
+                nextPosition = nextPosition - (iPlaneCol_n * (distancePointPlane - radius));
             };
         };
             
         //ground collision
         if (enableGroundCol)
         {
-            m_nextPosition[1] = m_nextPosition[1] < (groundHeight + radius) ? (groundHeight + radius) : m_nextPosition[1];
+            nextPosition[1] = nextPosition[1] < (groundHeight + radius) ? (groundHeight + radius) : nextPosition[1];
         };
 
-        // distance constraint
-        m_nextPosition = boneWorldTranslate + ((m_nextPosition - boneWorldTranslate).normal() * distance);
+        // angle limit
+        if (enableAngleLimit)
+        {
+            angleLimit(
+                boneWorldTranslate, 
+                endWorldTranslate, 
+                nextPosition, 
+                degToRad(angleLimitDegrees / 2.0)
+            );
+        };
+    }
+
+    if (iter == 0)
+    {
+        // angle limit
+        if (enableAngleLimit)
+        {
+            angleLimit(
+                boneWorldTranslate,
+                endWorldTranslate,
+                nextPosition,
+                degToRad(angleLimitDegrees / 2.0)
+            );
+        };
     }
 
     // distance constraint
-    m_nextPosition = boneWorldTranslate + ((m_nextPosition - boneWorldTranslate).normal() * distance);
+    nextPosition = distanceConstraint(boneWorldTranslate, nextPosition, distance);
     
     // update velocity
-    m_velocity = (m_nextPosition - m_position) / dt;
+    m_velocity = (nextPosition - m_position) / dt;
 
     // update position
-    m_position = m_nextPosition;
+    m_position = nextPosition;
     
     // update offset matrix
     m_prevOffsetMatrix = offsetMatrix;
 
     // set output local euler rotation
-    MVector initVec = (endWorldTranslate - boneWorldTranslate) * boneParentInverseMatrix * joInverseMatrix * roInverseMatrix;
-    MVector targetVec = (m_nextPosition - boneWorldTranslate) * boneParentInverseMatrix * joInverseMatrix * roInverseMatrix;
-    MQuaternion quat(initVec, targetVec);
-    MTransformationMatrix offseted_rotation = quat.asMatrix() * roMatrix;
-    MQuaternion offseted_quat = offseted_rotation.rotation();
-    MEulerRotation rot = offseted_quat.asEulerRotation();
+    const MVector initVec = (endWorldTranslate - boneWorldTranslate) * boneParentInverseMatrix * joInverseMatrix * roInverseMatrix;
+    const MVector targetVec = (nextPosition - boneWorldTranslate) * boneParentInverseMatrix * joInverseMatrix * roInverseMatrix;
+    const MQuaternion quat(initVec, targetVec);
+    const MTransformationMatrix offseted_rotation = quat.asMatrix() * roMatrix;
+    const MQuaternion offseted_quat = offseted_rotation.rotation();
+    const MEulerRotation rot = offseted_quat.asEulerRotation();
     
     outputRotateHandle.set3Double(rot.x, rot.y, rot.z);
         
