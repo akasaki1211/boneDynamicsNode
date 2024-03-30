@@ -144,11 +144,12 @@ Branching is possible, but good results are obtained with joints like the one on
 
 ## Pre-built plug-ins
 Pre-built `boneDynamicsNode.mll` in the [plug-ins](./plug-ins) folder. Install to the appropriate Maya version and ready to use.  
-|Build|Plug-in<br>(*Click on "Download raw file" at the link.)|
+|Version|Plug-in<br>(*Click on "Download raw file" at the link.)|
 |---|---|
 |Maya 2022 Update 5 win64|[Download](./plug-ins/2022/boneDynamicsNode.mll)|
 |Maya 2023 Update 3 win64|[Download](./plug-ins/2023/boneDynamicsNode.mll)|
 |Maya 2024 Update 2 win64|[Download](./plug-ins/2024/boneDynamicsNode.mll)|
+|Maya 2025 win64|[Download](./plug-ins/2025/boneDynamicsNode.mll)|
 
 ## How to Build  
 For example, Maya 2024 in Windows:  
