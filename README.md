@@ -92,6 +92,17 @@ The attributes that connect the collider are in a list, so you can use more than
 > Colliders do not necessarily need to use [expcol](https://github.com/akasaki1211/maya_expressionCollision). It can be anything as long as the required attributes are connected.  
 > ![collider_note](.images/collider_note.gif)  
 
+### Angle Limitation
+
+The `Angle Limit` attribute allows for limiting the rotation angle of bones. It has a higher priority than collision, so depending on the posture, it may be penetrated in the colliders.
+
+![angle_limit](.images/angle_limit.gif)
+
+> 💡**Visualize Angle**  
+> Place an implicitCone node and a transform nodes in the same space as the joint, and set and connect their attributes as in the following image:  
+> ![visualize_angle](.images/visualize_angle.png)
+> ⚠️If joint.ty and tz contain values, cone direction will not match accurately.  
+
 ### Specify Target Pose
 
 The converging pose can be manipulated by duplicating the joint-chain and connecting Rotate to `Rotation Offset`.  
@@ -155,12 +166,6 @@ cmake . -Bbuild_2024 -G "Visual Studio 17 2022" -A x64
 cmake --build build_2024
 ```
 
-## Known Issues
-- Not compute when connected to child plug.
-- Offset Matrix is not reset properly at Reset Time.
-- Rotation Offset is not reflected at Reset Time.
-
 ## TODO
-- [ ] Angle Limit  
 - [ ] Additional Force  
 - [ ] Stretchable
