@@ -52,7 +52,7 @@ public:
 
     // angle limit
     static MObject s_enableAngleLimit;  // use angle limit
-    static MObject s_limitAngle;        // limit angle
+    static MObject s_angleLimit;        // angle limit
 
     // radius
     static MObject s_radius;            // radius
@@ -83,8 +83,8 @@ public:
 private:
     //static double getFPS();
     double degToRad(double deg);
-    MVector angleLimitation(const MVector pivot, const MVector a, MVector b, const double limitAngle);
-    MVector distanceConstraint(MVector pivot, MVector point, double distance);
+    void angleLimit(const MVector& pivot, const MVector& a, MVector& b, const double limitAngle);
+    MVector distanceConstraint(const MVector& pivot, const MVector& point, double distance);
     
     bool m_init;
     MMatrix m_prevOffsetMatrix;

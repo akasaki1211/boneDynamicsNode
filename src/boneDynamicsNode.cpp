@@ -42,7 +42,7 @@ MObject boneDynamicsNode::s_gravityMultiply;
 MObject boneDynamicsNode::s_gravity;
 
 MObject boneDynamicsNode::s_enableAngleLimit;
-MObject boneDynamicsNode::s_limitAngle;
+MObject boneDynamicsNode::s_angleLimit;
 
 MObject boneDynamicsNode::s_radius;
 
@@ -194,7 +194,7 @@ MStatus boneDynamicsNode::initialize()
     s_enableAngleLimit = nAttr.create("enableAngleLimit", "eal", MFnNumericData::kBoolean, false);
     nAttr.setKeyable(true);
 
-    s_limitAngle = nAttr.create("limitAngle", "la", MFnNumericData::kDouble, 60.0);
+    s_angleLimit = nAttr.create("angleLimit", "al", MFnNumericData::kDouble, 60.0);
     nAttr.setKeyable(true);
     nAttr.setMin(0);
     nAttr.setMax(360);
@@ -305,7 +305,7 @@ MStatus boneDynamicsNode::initialize()
     addAttribute(s_gravityMultiply);
 
     addAttribute(s_enableAngleLimit);
-    addAttribute(s_limitAngle);
+    addAttribute(s_angleLimit);
 
     addAttribute(s_radius);
 
@@ -356,7 +356,7 @@ MStatus boneDynamicsNode::initialize()
     attributeAffects(s_gravityMultiply, s_outputRotate);
 
     attributeAffects(s_enableAngleLimit, s_outputRotate);
-    attributeAffects(s_limitAngle, s_outputRotate);
+    attributeAffects(s_angleLimit, s_outputRotate);
 
     attributeAffects(s_radius, s_outputRotate);
 
@@ -399,7 +399,7 @@ double boneDynamicsNode::degToRad(double deg)
     return deg * (M_PI / 180);
 }
 
-MVector boneDynamicsNode::angleLimitation(const MVector pivot, const MVector a, MVector b, const double limitAngle)
+void boneDynamicsNode::angleLimit(const MVector& pivot, const MVector& a, MVector& b, const double limitAngle)
 {
     const MVector initVec = a - pivot;
     const MVector currentVec = b - pivot;
@@ -413,24 +413,20 @@ MVector boneDynamicsNode::angleLimitation(const MVector pivot, const MVector a, 
     {
         const double rotateAngle = limitAngle - currentAngle;
 
-        // project onto axis
-        const double d = currentVec * axis.normal();
-        const MVector projectVec = axis.normal() * d;
+        const MVector axisNormal = axis.normal();
+        const double d = currentVec * axisNormal;
+        const MVector projectVec = axisNormal * d;
         const MVector orthogonalVec = currentVec - projectVec;
 
-        // rotate vector arround axis
-        const MVector t = (axis.normal() ^ orthogonalVec) * sin(rotateAngle);
-        const MVector s = orthogonalVec * cos(rotateAngle);
-        const MVector rotatedVec = projectVec + s + t;
+        // rotate vector around axis
+        const MVector rotatedVec = projectVec + orthogonalVec * cos(rotateAngle) + (axisNormal ^ orthogonalVec) * sin(rotateAngle);
 
         // update position
         b = pivot + rotatedVec;
     }
-
-    return b;
 }
 
-MVector boneDynamicsNode::distanceConstraint(MVector pivot, MVector point, double distance)
+MVector boneDynamicsNode::distanceConstraint(const MVector& pivot, const MVector& point, double distance)
 {
     return pivot + ((point - pivot).normal() * distance);
 }
@@ -446,7 +442,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     // output data handles
     MDataHandle& outputRotateHandle = data.outputValue(s_outputRotate);
     
-    const bool& enable = data.inputValue(s_enable).asBool();
+    const bool enable = data.inputValue(s_enable).asBool();
     if (!enable)
     {
         //return MS::kUnknownParameter;
@@ -476,12 +472,20 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     // get rotation offset matrix
     const MEulerRotation rotationOffsetEuler(rotationOffset, MEulerRotation::RotationOrder::kXYZ); // Specified xyz
     const MMatrix roMatrix = rotationOffsetEuler.asMatrix();
-    const MMatrix roInverseMatrix = roMatrix.inverse();
+    MMatrix roInverseMatrix;
+    if (!roMatrix.isEquivalent(MMatrix::identity))
+    {
+        roInverseMatrix = roMatrix.inverse();
+    }
 
     // get joint orient matrix
     const MEulerRotation boneJointOrientEuler(boneJointOrient, MEulerRotation::RotationOrder::kXYZ); // Specified xyz
     const MMatrix joMatrix = boneJointOrientEuler.asMatrix();
-    const MMatrix joInverseMatrix = joMatrix.inverse();
+    MMatrix joInverseMatrix;
+    if (!joMatrix.isEquivalent(MMatrix::identity))
+    {
+        joInverseMatrix = joMatrix.inverse();
+    }
 
     // get bone matrix
     MTransformationMatrix boneTransformationMatrix;
@@ -512,11 +516,11 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     const double distance = (endWorldTranslate - boneWorldTranslate).length();
 
     // dynamics
-    const double& damping = data.inputValue(s_damping).asDouble();
-    const double& elasticity = data.inputValue(s_elasticity).asDouble();
-    const double& stiffness = data.inputValue(s_stiffness).asDouble();
-    const double& mass = data.inputValue(s_mass).asDouble();
-    const double& gravityMultiply = data.inputValue(s_gravityMultiply).asDouble();
+    const double damping = data.inputValue(s_damping).asDouble();
+    const double elasticity = data.inputValue(s_elasticity).asDouble();
+    const double stiffness = data.inputValue(s_stiffness).asDouble();
+    const double mass = data.inputValue(s_mass).asDouble();
+    const double gravityMultiply = data.inputValue(s_gravityMultiply).asDouble();
     const MVector& gravity = data.inputValue(s_gravity).asVector();
     
     const MTime& time = data.inputValue(s_time).asTime();
@@ -538,7 +542,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
 
     // delta time
     //double dt = 1.0 / getFPS();
-    const double& fps = data.inputValue(s_fps).asDouble();
+    const double fps = data.inputValue(s_fps).asDouble();
     const double dt = 1.0 / fps;
 
     // position offset
@@ -564,21 +568,21 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     nextPosition += (m_position - nextPosition) * stiffness;
 
     // angle limit
-    const bool& enableAngleLimit = data.inputValue(s_enableAngleLimit).asBool();
-    const double& limitAngleDegrees = data.inputValue(s_limitAngle).asDouble();
+    const bool enableAngleLimit = data.inputValue(s_enableAngleLimit).asBool();
+    const double angleLimitDegrees = data.inputValue(s_angleLimit).asDouble();
 
     // collision
-    const bool& enableGroundCol = data.inputValue(s_enableGroundCol).asBool();
-    const double& groundHeight = data.inputValue(s_groundHeight).asDouble();
+    const bool enableGroundCol = data.inputValue(s_enableGroundCol).asBool();
+    const double groundHeight = data.inputValue(s_groundHeight).asDouble();
 
     MArrayDataHandle& sphereColArrayHandle = data.inputArrayValue(s_sphereCollider);
-    const unsigned int& scCount = sphereColArrayHandle.elementCount();
+    const unsigned int scCount = sphereColArrayHandle.elementCount();
         
     MArrayDataHandle& capsuleColArrayHandle = data.inputArrayValue(s_capsuleCollider);
-    const unsigned int& ccCount = capsuleColArrayHandle.elementCount();
+    const unsigned int ccCount = capsuleColArrayHandle.elementCount();
         
     MArrayDataHandle& iPlaneColArrayHandle = data.inputArrayValue(s_iPlaneCollider);
-    const unsigned int& pcCount = iPlaneColArrayHandle.elementCount();
+    const unsigned int pcCount = iPlaneColArrayHandle.elementCount();
 
     MTransformationMatrix sphereCol_m;
     MVector sphereCol_p;
@@ -598,7 +602,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     MVector v;
     double r;
 
-    const long& iter = data.inputValue(s_iterations).asLong();
+    const long iter = data.inputValue(s_iterations).asLong();
 
     for (int i = 0; i < iter; i++)
     {
@@ -693,11 +697,11 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         // angle limit
         if (enableAngleLimit)
         {
-            nextPosition = angleLimitation(
+            angleLimit(
                 boneWorldTranslate, 
                 endWorldTranslate, 
                 nextPosition, 
-                degToRad(limitAngleDegrees / 2.0)
+                degToRad(angleLimitDegrees / 2.0)
             );
         };
     }
@@ -707,11 +711,11 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         // angle limit
         if (enableAngleLimit)
         {
-            nextPosition = angleLimitation(
+            angleLimit(
                 boneWorldTranslate,
                 endWorldTranslate,
                 nextPosition,
-                degToRad(limitAngleDegrees / 2.0)
+                degToRad(angleLimitDegrees / 2.0)
             );
         };
     }
