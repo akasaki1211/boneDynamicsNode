@@ -1,17 +1,5 @@
 #include "boneDynamicsNode.h"
 
-#include <maya/MFnNumericAttribute.h>
-#include <maya/MFnCompoundAttribute.h>
-#include <maya/MFnMatrixAttribute.h>
-#include <maya/MFnUnitAttribute.h>
-#include <maya/MTime.h>
-#include <maya/MVector.h>
-#include <maya/MPoint.h>
-#include <maya/MMatrix.h>
-#include <maya/MTransformationMatrix.h>
-#include <maya/MQuaternion.h>
-#include <maya/MEulerRotation.h>
-
 MTypeId boneDynamicsNode::s_id(0x7b001);
 
 MObject boneDynamicsNode::s_enable;
@@ -426,9 +414,10 @@ void boneDynamicsNode::angleLimit(const MVector& pivot, const MVector& a, MVecto
     }
 }
 
-MVector boneDynamicsNode::distanceConstraint(const MVector& pivot, const MVector& point, double distance)
+void boneDynamicsNode::distanceConstraint(const MVector& pivot, MVector& point, double distance)
 {
-    return pivot + ((point - pivot).normal() * distance);
+    // update point
+    point = pivot + ((point - pivot).normal() * distance);
 }
 
 MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
@@ -470,7 +459,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     const MVector& rotationOffset = data.inputValue(s_rotationOffset).asVector();
 
     // get rotation offset matrix
-    const MEulerRotation rotationOffsetEuler(rotationOffset, MEulerRotation::RotationOrder::kXYZ); // Specified xyz
+    const MEulerRotation rotationOffsetEuler(rotationOffset, ROTATION_ORDER);
     const MMatrix roMatrix = rotationOffsetEuler.asMatrix();
     MMatrix roInverseMatrix;
     if (!roMatrix.isEquivalent(MMatrix::identity))
@@ -479,7 +468,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     }
 
     // get joint orient matrix
-    const MEulerRotation boneJointOrientEuler(boneJointOrient, MEulerRotation::RotationOrder::kXYZ); // Specified xyz
+    const MEulerRotation boneJointOrientEuler(boneJointOrient, ROTATION_ORDER);
     const MMatrix joMatrix = boneJointOrientEuler.asMatrix();
     MMatrix joInverseMatrix;
     if (!joMatrix.isEquivalent(MMatrix::identity))
@@ -607,7 +596,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     for (int i = 0; i < iter; i++)
     {
         // distance constraint
-        nextPosition = distanceConstraint(boneWorldTranslate, nextPosition, distance);
+        distanceConstraint(boneWorldTranslate, nextPosition, distance);
         
         //sphere collision
         for (unsigned int i = 0; i < scCount; i++) {
@@ -721,7 +710,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     }
 
     // distance constraint
-    nextPosition = distanceConstraint(boneWorldTranslate, nextPosition, distance);
+    distanceConstraint(boneWorldTranslate, nextPosition, distance);
     
     // update velocity
     m_velocity = (nextPosition - m_position) / dt;

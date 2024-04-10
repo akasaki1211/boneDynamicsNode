@@ -2,8 +2,17 @@
 
 #include <maya/MPxNode.h>
 #include <maya/MTypeId.h>
+#include <maya/MFnNumericAttribute.h>
+#include <maya/MFnCompoundAttribute.h>
+#include <maya/MFnMatrixAttribute.h>
+#include <maya/MFnUnitAttribute.h>
+#include <maya/MTime.h>
 #include <maya/MVector.h>
+#include <maya/MPoint.h>
 #include <maya/MMatrix.h>
+#include <maya/MTransformationMatrix.h>
+#include <maya/MQuaternion.h>
+#include <maya/MEulerRotation.h>
 
 class boneDynamicsNode : public MPxNode
 {
@@ -84,7 +93,9 @@ private:
     //static double getFPS();
     double degToRad(double deg);
     void angleLimit(const MVector& pivot, const MVector& a, MVector& b, const double limitAngle);
-    MVector distanceConstraint(const MVector& pivot, const MVector& point, double distance);
+    void distanceConstraint(const MVector& pivot, MVector& point, double distance);
+
+    static const MEulerRotation::RotationOrder ROTATION_ORDER = MEulerRotation::RotationOrder::kXYZ;
     
     bool m_init;
     MMatrix m_prevOffsetMatrix;
