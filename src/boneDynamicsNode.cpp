@@ -600,7 +600,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         
         //sphere collision
         for (unsigned int i = 0; i < scCount; i++) {
-            sphereColArrayHandle.jumpToElement(i);
+            sphereColArrayHandle.jumpToArrayElement(i);
             MDataHandle& sphereCollider = sphereColArrayHandle.inputValue();
             sphereCol_m = sphereCollider.child(s_sphereColMtx).asMatrix();
             sphereCol_p = sphereCol_m.getTranslation(MSpace::kWorld);
@@ -617,7 +617,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
 
         //capsule collision
         for (unsigned int i = 0; i < ccCount; i++) {
-            capsuleColArrayHandle.jumpToElement(i);
+            capsuleColArrayHandle.jumpToArrayElement(i);
             MDataHandle& capsuleCollider = capsuleColArrayHandle.inputValue();
             capsuleCol_mA = capsuleCollider.child(s_capsuleColMtxA).asMatrix();
             capsuleCol_pA = capsuleCol_mA.getTranslation(MSpace::kWorld);
@@ -664,7 +664,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
 
         //infinite plane collision
         for (unsigned int i = 0; i < pcCount; i++) {
-            iPlaneColArrayHandle.jumpToElement(i);
+            iPlaneColArrayHandle.jumpToArrayElement(i);
             MDataHandle& iPlaneCollider = iPlaneColArrayHandle.inputValue();
             iPlaneCol_m = iPlaneCollider.child(s_iPlaneColMtx).asMatrix();
             iPlaneCol_p = iPlaneCol_m.getTranslation(MSpace::kWorld);
