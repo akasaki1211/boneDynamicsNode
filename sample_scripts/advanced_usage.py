@@ -103,7 +103,7 @@ def create_dynamics_node(
             capsule_col_idx += 1
         
         elif colliderType == 'infinitePlane':
-            cmds.connectAttr(col + ".worldMatrix[0]", boneDynamicsNode + ".infinitePlaneCollider[{}].infinitePlaneColMatrix".format(sphere_col_idx), f=True)
+            cmds.connectAttr(col + ".worldMatrix[0]", boneDynamicsNode + ".infinitePlaneCollider[{}].infinitePlaneColMatrix".format(iplane_col_cidx), f=True)
             iplane_col_cidx += 1
 
     return boneDynamicsNode

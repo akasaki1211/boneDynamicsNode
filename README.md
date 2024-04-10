@@ -34,7 +34,7 @@ Let's move the current frame to 1 or later and move the root. The joint-chain sh
 > Joint chain must meet the requirements [here](#Requirements-for-Joint).
 
 > 💡**Sample Script**  
-> [basic_usage.py](scripts/basic_usage.py) is a script to connect bonedynamicsNode to any joint chain. Please select and execute them in order from the root of the joint to the tip of the joint.  
+> [basic_usage.py](sample_scripts/basic_usage.py) is a script to connect bonedynamicsNode to any joint chain. Please select and execute them in order from the root of the joint to the tip of the joint.  
 
 ### Attributes to Check
 - `Enable` : Turning it off disables all calculations.  
@@ -55,7 +55,7 @@ Select the joint and execute "Bake Simulation" from the "Key" menu. Then delete 
 ### Requirements for Joint
 - Rotate should be [0,0,0], with only the Joint Orient having a value.
 - Do not edit rotatePivot, rotatePivotTranslate, scalePivot, or scalePivotTranslate.  
-- Rotate Oeder is only available for xyz.  
+- Rotate Order is only available for xyz.  
 - Rotate Axis should remain [0,0,0].  
 - Leave Inherits Transform checked.  
 - Leave Offset Parent Matrix at its default value.  
@@ -136,7 +136,7 @@ Branching is possible, but good results are obtained with joints like the one on
 ![branching_skeleton](.images/branching_skeleton.png)
 
 > 💡**Sample Script**  
-> [advanced_usage.py](scripts/advanced_usage.py) is a script to connect bonedynamicsNode to any joint chain. Please select and execute them in order from the root of the joint to the tip of the joint.  
+> [advanced_usage.py](sample_scripts/advanced_usage.py) is a script to connect bonedynamicsNode to any joint chain. Please select and execute them in order from the root of the joint to the tip of the joint.  
 > - Enable per-section scaling.  
 > - If place the collider created by expcol as a child of 'collider_grp', to be connected.  
 > - If duplicate the joint-chain to be simulated and add '_target' to the end of the name, to allow manipulation of the target posture.  
@@ -170,3 +170,7 @@ cmake --build build_2024
 ## TODO
 - [ ] Additional Force  
 - [ ] Stretchable
+
+## Links
+- [Maya用お手軽ボーンダイナミクスノード「boneDynamicsNode」詳細解説 - Qiita](https://qiita.com/akasaki1211/items/ddae66ec2d89d21bb2f4)
+- [boneDynamicsNode Demo - Example of integration into FK rig - YouTube](https://www.youtube.com/watch?v=O5cpcMI_Jz0)
