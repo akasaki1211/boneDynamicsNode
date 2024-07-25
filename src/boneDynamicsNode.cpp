@@ -400,16 +400,10 @@ void boneDynamicsNode::angleLimit(const MVector& pivot, const MVector& a, MVecto
     if (currentAngle > limitAngle)
     {
         const double rotateAngle = limitAngle - currentAngle;
-
         const MVector axisNormal = axis.normal();
-        const double d = currentVec * axisNormal;
-        const MVector projectVec = axisNormal * d;
-        const MVector orthogonalVec = currentVec - projectVec;
 
-        // rotate vector around axis
-        const MVector rotatedVec = projectVec + orthogonalVec * cos(rotateAngle) + (axisNormal ^ orthogonalVec) * sin(rotateAngle);
+        const MVector rotatedVec = currentVec * cos(rotateAngle) + (axisNormal ^ currentVec) * sin(rotateAngle);
 
-        // update position
         b = pivot + rotatedVec;
     }
 }
