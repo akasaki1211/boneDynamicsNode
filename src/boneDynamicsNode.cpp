@@ -52,6 +52,9 @@ MObject boneDynamicsNode::s_capsuleColRadB;
 MObject boneDynamicsNode::s_iPlaneCollider;
 MObject boneDynamicsNode::s_iPlaneColMtx;
 
+MObject boneDynamicsNode::s_meshCollider;
+MObject boneDynamicsNode::s_meshColCutoff;
+
 MObject boneDynamicsNode::s_outputRotate;
 
 boneDynamicsNode::boneDynamicsNode()
@@ -79,6 +82,7 @@ MStatus boneDynamicsNode::initialize()
     MFnCompoundAttribute cmpAttr;
     MFnMatrixAttribute mAttr;
     MFnUnitAttribute uAttr;
+    MFnTypedAttribute tAttr;
     MObject x, y, z;
 
     s_enable = nAttr.create("enable", "en", MFnNumericData::kBoolean, true);
@@ -255,6 +259,16 @@ MStatus boneDynamicsNode::initialize()
     cmpAttr.setReadable(true);
     cmpAttr.setUsesArrayDataBuilder(true);
 
+    // meshCollider
+    s_meshCollider = tAttr.create("meshCollider", "mc", MFnData::kMesh);
+    tAttr.setArray(true);
+    tAttr.setReadable(true);
+    tAttr.setUsesArrayDataBuilder(true);
+
+    s_meshColCutoff = nAttr.create("meshColCutoff", "mcc", MFnNumericData::kDouble, 10.0);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0);
+
     // output attributes
     x = uAttr.create("outputRotateX", "outrx", MFnUnitAttribute::kAngle, 0.0);
     y = uAttr.create("outputRotateY", "outry", MFnUnitAttribute::kAngle, 0.0);
@@ -311,6 +325,8 @@ MStatus boneDynamicsNode::initialize()
     addAttribute(s_capsuleCollider);
     addAttribute(s_iPlaneColMtx);
     addAttribute(s_iPlaneCollider);
+    addAttribute(s_meshCollider);
+    addAttribute(s_meshColCutoff);
     
     addAttribute(s_outputRotate);
     
@@ -362,6 +378,8 @@ MStatus boneDynamicsNode::initialize()
     attributeAffects(s_capsuleCollider, s_outputRotate);
     attributeAffects(s_iPlaneColMtx, s_outputRotate);
     attributeAffects(s_iPlaneCollider, s_outputRotate);
+    attributeAffects(s_meshCollider, s_outputRotate);
+    attributeAffects(s_meshColCutoff, s_outputRotate);
     
     return MS::kSuccess;
 }
@@ -412,6 +430,14 @@ void boneDynamicsNode::distanceConstraint(const MVector& pivot, MVector& point, 
 {
     // update point
     point = pivot + ((point - pivot).normal() * distance);
+}
+
+void boneDynamicsNode::getClosestPoint(const MObject& mesh, const MPoint& position, MPoint& closestPoint, MVector& closestNormal)
+{
+    MFnMesh fnMesh(mesh);
+    int closestPolygon;
+    fnMesh.getClosestPoint(position, closestPoint, MSpace::kWorld, &closestPolygon);
+    fnMesh.getPolygonNormal(closestPolygon, closestNormal, MSpace::kWorld);
 }
 
 MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
@@ -567,6 +593,10 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     MArrayDataHandle& iPlaneColArrayHandle = data.inputArrayValue(s_iPlaneCollider);
     const unsigned int pcCount = iPlaneColArrayHandle.elementCount();
 
+    MArrayDataHandle& meshColArrayHandle = data.inputArrayValue(s_meshCollider);
+    const unsigned int mcCount = meshColArrayHandle.elementCount();
+    const double meshColCutoff = data.inputValue(s_meshColCutoff).asDouble();
+    
     MTransformationMatrix sphereCol_m;
     MVector sphereCol_p;
     double sphereCol_s[3];
@@ -581,6 +611,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     MTransformationMatrix iPlaneCol_m;
     MVector iPlaneCol_p;
     MVector iPlaneCol_n;
+    MObject meshCol;
 
     MVector v;
     double r;
@@ -669,6 +700,26 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
             {
                 nextPosition = nextPosition - (iPlaneCol_n * (distancePointPlane - radius));
             };
+        };
+
+        //mesh collision
+        for (unsigned int i = 0; i < mcCount; i++) {
+            meshColArrayHandle.jumpToArrayElement(i);
+            MDataHandle& meshCollider = meshColArrayHandle.inputValue();
+            meshCol = meshCollider.asMesh();
+
+            MPoint closestPoint;
+            MVector closestNormal;
+            getClosestPoint(meshCol, MPoint(nextPosition), closestPoint, closestNormal);
+
+            const MVector contactPos = (MVector(closestPoint) + (closestNormal * radius));
+            const MVector pointVec = nextPosition - contactPos;
+            
+            if (pointVec.length() < meshColCutoff) {
+                if (closestNormal * pointVec < 0) {
+                    nextPosition = contactPos;
+                }
+            }
         };
             
         //ground collision
