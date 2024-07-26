@@ -327,7 +327,7 @@ MStatus boneDynamicsNode::initialize()
     addAttribute(s_iPlaneCollider);
     addAttribute(s_meshCollider);
     addAttribute(s_meshColCutoff);
-    
+
     addAttribute(s_outputRotate);
     
 
@@ -432,12 +432,10 @@ void boneDynamicsNode::distanceConstraint(const MVector& pivot, MVector& point, 
     point = pivot + ((point - pivot).normal() * distance);
 }
 
-void boneDynamicsNode::getClosestPoint(const MObject& mesh, const MPoint& position, MPoint& closestPoint, MVector& closestNormal)
+void boneDynamicsNode::getClosestPoint(const MObject& mesh, const MPoint& point, MPoint& closestPoint, MVector& closestNormal)
 {
     MFnMesh fnMesh(mesh);
-    int closestPolygon;
-    fnMesh.getClosestPoint(position, closestPoint, MSpace::kWorld, &closestPolygon);
-    fnMesh.getPolygonNormal(closestPolygon, closestNormal, MSpace::kWorld);
+    fnMesh.getClosestPointAndNormal(point, closestPoint, closestNormal, MSpace::kWorld);
 }
 
 MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
@@ -702,30 +700,35 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
             };
         };
 
-        //mesh collision
+        //mesh collision (experimental)
         for (unsigned int i = 0; i < mcCount; i++) {
             meshColArrayHandle.jumpToArrayElement(i);
             MDataHandle& meshCollider = meshColArrayHandle.inputValue();
             meshCol = meshCollider.asMesh();
 
+            // Get the closest point and closest normal on a mesh
             MPoint closestPoint;
             MVector closestNormal;
             getClosestPoint(meshCol, MPoint(nextPosition), closestPoint, closestNormal);
+            closestNormal = closestNormal.normal();
 
-            const MVector contactPos = (MVector(closestPoint) + (closestNormal * radius));
-            const MVector pointVec = nextPosition - contactPos;
+            // Get the vector from the closest point to the current point
+            const MVector contactVec = nextPosition - MVector(closestPoint);
+
+            // Get the distance to the surface
+            const double distanceContactPoint = closestNormal * contactVec;
             
-            if (pointVec.length() < meshColCutoff) {
-                if (closestNormal * pointVec < 0) {
-                    nextPosition = contactPos;
-                }
+            // If it is penetrated in the surface, it will be pushed out
+            if (distanceContactPoint - radius < 0.0) {
+                // If it is completely penetrated, it uses the closest normal to push out, if it is only in contact, it uses the contactVec to push out.
+                nextPosition = MVector(closestPoint) + ((distanceContactPoint < 0) ? closestNormal : contactVec.normal()) * radius;
             }
         };
             
         //ground collision
         if (enableGroundCol)
         {
-            nextPosition[1] = nextPosition[1] < (groundHeight + radius) ? (groundHeight + radius) : nextPosition[1];
+            nextPosition[1] = nextPosition[1] < (groundHeight + radius) ? (groundHeight + radius) : nextPosition[1]; // Y-Up only
         };
 
         // angle limit
