@@ -62,17 +62,18 @@ def create_dynamics_node(
         cmds.setAttr(angle_cone_tm + '.overrideDisplayType', 2)
 
         # collision radius
-        if colliders:
-            radius_sphere = cmds.createNode("implicitSphere")
-            cmds.connectAttr(boneDynamicsNode + '.radius', radius_sphere + '.radius', f=True)
-            radius_sphere_tm = cmds.listRelatives(radius_sphere, p=True)[0]
-            cmds.parent(radius_sphere_tm, end, r=True)
-            cmds.setAttr(radius_sphere_tm + '.overrideEnabled', 1)
-            cmds.setAttr(radius_sphere_tm + '.overrideDisplayType', 2)
+        radius_sphere = cmds.createNode("implicitSphere")
+        cmds.connectAttr(boneDynamicsNode + '.radius', radius_sphere + '.radius', f=True)
+        radius_sphere_tm = cmds.listRelatives(radius_sphere, p=True)[0]
+        cmds.parent(radius_sphere_tm, end, r=True)
+        cmds.setAttr(radius_sphere_tm + '.overrideEnabled', 1)
+        cmds.setAttr(radius_sphere_tm + '.overrideDisplayType', 2)
+        cmds.connectAttr(boneDynamicsNode + '.iterations', radius_sphere_tm + '.v', f=True)
     
     sphere_col_idx = 0
     capsule_col_idx = 0
-    iplane_col_cidx = 0
+    iplane_col_idx = 0
+    mesh_col_idx = 0
 
     for col in colliders:
         
@@ -81,6 +82,12 @@ def create_dynamics_node(
             continue
 
         if not cmds.attributeQuery('colliderType', n=col, ex=True):
+            col_shape = cmds.listRelatives(col, s=True, f=True)
+            if col_shape:
+                if cmds.nodeType(col_shape[0]) == 'mesh':
+                    cmds.connectAttr(col_shape[0] + '.worldMesh[0]', boneDynamicsNode + '.meshCollider[{}]'.format(mesh_col_idx), f=True)
+                    mesh_col_idx += 1
+                    continue
             print("Skip: {} has no 'colliderType' attribute.".format(col))
             continue
 
@@ -103,8 +110,8 @@ def create_dynamics_node(
             capsule_col_idx += 1
         
         elif colliderType == 'infinitePlane':
-            cmds.connectAttr(col + ".worldMatrix[0]", boneDynamicsNode + ".infinitePlaneCollider[{}].infinitePlaneColMatrix".format(iplane_col_cidx), f=True)
-            iplane_col_cidx += 1
+            cmds.connectAttr(col + ".worldMatrix[0]", boneDynamicsNode + ".infinitePlaneCollider[{}].infinitePlaneColMatrix".format(iplane_col_idx), f=True)
+            iplane_col_idx += 1
 
     return boneDynamicsNode
 

@@ -52,6 +52,9 @@ MObject boneDynamicsNode::s_capsuleColRadB;
 MObject boneDynamicsNode::s_iPlaneCollider;
 MObject boneDynamicsNode::s_iPlaneColMtx;
 
+MObject boneDynamicsNode::s_meshCollider;
+MObject boneDynamicsNode::s_meshColCutoff;
+
 MObject boneDynamicsNode::s_outputRotate;
 
 boneDynamicsNode::boneDynamicsNode()
@@ -79,6 +82,7 @@ MStatus boneDynamicsNode::initialize()
     MFnCompoundAttribute cmpAttr;
     MFnMatrixAttribute mAttr;
     MFnUnitAttribute uAttr;
+    MFnTypedAttribute tAttr;
     MObject x, y, z;
 
     s_enable = nAttr.create("enable", "en", MFnNumericData::kBoolean, true);
@@ -255,6 +259,16 @@ MStatus boneDynamicsNode::initialize()
     cmpAttr.setReadable(true);
     cmpAttr.setUsesArrayDataBuilder(true);
 
+    // meshCollider
+    s_meshCollider = tAttr.create("meshCollider", "mc", MFnData::kMesh);
+    tAttr.setArray(true);
+    tAttr.setReadable(true);
+    tAttr.setUsesArrayDataBuilder(true);
+
+    s_meshColCutoff = nAttr.create("meshColCutoff", "mcc", MFnNumericData::kDouble, 10.0);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0);
+
     // output attributes
     x = uAttr.create("outputRotateX", "outrx", MFnUnitAttribute::kAngle, 0.0);
     y = uAttr.create("outputRotateY", "outry", MFnUnitAttribute::kAngle, 0.0);
@@ -311,7 +325,9 @@ MStatus boneDynamicsNode::initialize()
     addAttribute(s_capsuleCollider);
     addAttribute(s_iPlaneColMtx);
     addAttribute(s_iPlaneCollider);
-    
+    addAttribute(s_meshCollider);
+    addAttribute(s_meshColCutoff);
+
     addAttribute(s_outputRotate);
     
 
@@ -362,6 +378,8 @@ MStatus boneDynamicsNode::initialize()
     attributeAffects(s_capsuleCollider, s_outputRotate);
     attributeAffects(s_iPlaneColMtx, s_outputRotate);
     attributeAffects(s_iPlaneCollider, s_outputRotate);
+    attributeAffects(s_meshCollider, s_outputRotate);
+    attributeAffects(s_meshColCutoff, s_outputRotate);
     
     return MS::kSuccess;
 }
@@ -400,16 +418,10 @@ void boneDynamicsNode::angleLimit(const MVector& pivot, const MVector& a, MVecto
     if (currentAngle > limitAngle)
     {
         const double rotateAngle = limitAngle - currentAngle;
-
         const MVector axisNormal = axis.normal();
-        const double d = currentVec * axisNormal;
-        const MVector projectVec = axisNormal * d;
-        const MVector orthogonalVec = currentVec - projectVec;
 
-        // rotate vector around axis
-        const MVector rotatedVec = projectVec + orthogonalVec * cos(rotateAngle) + (axisNormal ^ orthogonalVec) * sin(rotateAngle);
+        const MVector rotatedVec = currentVec * cos(rotateAngle) + (axisNormal ^ currentVec) * sin(rotateAngle);
 
-        // update position
         b = pivot + rotatedVec;
     }
 }
@@ -418,6 +430,12 @@ void boneDynamicsNode::distanceConstraint(const MVector& pivot, MVector& point, 
 {
     // update point
     point = pivot + ((point - pivot).normal() * distance);
+}
+
+void boneDynamicsNode::getClosestPoint(const MObject& mesh, const MPoint& point, MPoint& closestPoint, MVector& closestNormal)
+{
+    MFnMesh fnMesh(mesh);
+    fnMesh.getClosestPointAndNormal(point, closestPoint, closestNormal, MSpace::kWorld);
 }
 
 MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
@@ -573,6 +591,10 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     MArrayDataHandle& iPlaneColArrayHandle = data.inputArrayValue(s_iPlaneCollider);
     const unsigned int pcCount = iPlaneColArrayHandle.elementCount();
 
+    MArrayDataHandle& meshColArrayHandle = data.inputArrayValue(s_meshCollider);
+    const unsigned int mcCount = meshColArrayHandle.elementCount();
+    const double meshColCutoff = data.inputValue(s_meshColCutoff).asDouble();
+    
     MTransformationMatrix sphereCol_m;
     MVector sphereCol_p;
     double sphereCol_s[3];
@@ -587,6 +609,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     MTransformationMatrix iPlaneCol_m;
     MVector iPlaneCol_p;
     MVector iPlaneCol_n;
+    MObject meshCol;
 
     MVector v;
     double r;
@@ -676,11 +699,41 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
                 nextPosition = nextPosition - (iPlaneCol_n * (distancePointPlane - radius));
             };
         };
+
+        //mesh collision (experimental)
+        for (unsigned int i = 0; i < mcCount; i++) {
+            meshColArrayHandle.jumpToArrayElement(i);
+            MDataHandle& meshCollider = meshColArrayHandle.inputValue();
+            meshCol = meshCollider.asMesh();
+
+            // Get the closest point and closest normal on a mesh
+            MPoint closestPoint;
+            MVector closestNormal;
+            getClosestPoint(meshCol, MPoint(nextPosition), closestPoint, closestNormal);
+            closestNormal = closestNormal.normal();
+
+            // Get the vector from the closest point to the current point
+            const MVector contactVec = nextPosition - MVector(closestPoint);
+
+            // Get the distance to the surface
+            const double distanceContactPoint = closestNormal * contactVec;
+            
+            // If it is penetrated in the surface, it will be pushed out
+            if (distanceContactPoint - radius < 0.0) {
+                // If it is completely penetrated, it uses the closest normal to push out, if it is only in contact, it uses the contactVec to push out.
+                MVector pushOutPos = MVector(closestPoint) + ((distanceContactPoint < 0) ? closestNormal : contactVec.normal()) * radius;
+                
+                // If the position after push out is within meshColCutoff from the current position, it will be pushed out.
+                if ((nextPosition - pushOutPos).length() < meshColCutoff) {
+                    nextPosition = pushOutPos;
+                }
+            }
+        };
             
         //ground collision
         if (enableGroundCol)
         {
-            nextPosition[1] = nextPosition[1] < (groundHeight + radius) ? (groundHeight + radius) : nextPosition[1];
+            nextPosition[1] = nextPosition[1] < (groundHeight + radius) ? (groundHeight + radius) : nextPosition[1]; // Y-Up only
         };
 
         // angle limit

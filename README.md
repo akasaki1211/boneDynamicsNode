@@ -66,21 +66,16 @@ All of the above checkpoints can be satisfied by making joints as usual.
 ## Features
 ### Collisions
 
-4 types of collisions are available: ground, sphere, capsule, and infinite plane. Colliders can be created with [maya_expressionCollision](https://github.com/akasaki1211/maya_expressionCollision).  
-
-![collisions](.images/collisions.gif)
+5 types of collisions are available: **Sphere, Capsule, Infinite plane, Mesh, and Ground**.  
 
 - `Radius` : Radius of the end-joint.  
-- `Iterations` : Higher values increase the accuracy of collisions. Recommended value is 3 to 5. 0 disables collisionss.  
-- `Enable Ground Col` : Enable ground collision.  
-- `Ground Height` : Height of the ground.  
-- `Sphere Col Matrix` : Connect the sphere collider worldMatrix.  
-- `Sphere Col Radius` : Radius of sphere collider.  
-- `Capsule Col Matrix A` `Capsule Col Matrix B` : Connect worldMatrix on one side of the capsule collider.  
-- `Capsule Col Radius A` `Capsule Col Radius B` : Connect the radius of one side of the capsule collider.  
-- `Infinite Plane Col Matrix` : Connect worldMatrix of infinite plane collider.  
+- `Iterations` : Higher values increase the accuracy of collisions. Recommended value is 3 to 5. 0 disables collisions.  
 
-The attributes that connect the collider are in a list, so you can use more than one. Ground Collision do not need connections.  
+Collisions are determined by the sphere centered around the end-joint. The radius of the end-joint is set with the Radius attribute.
+
+![radius](.images/radius.png)
+
+The attributes that connect the collider are in a list, so you can use more than one. Ground Collision does not need connections.  
  
 ![collider_connections](.images/collider_connections.png)
 
@@ -88,9 +83,48 @@ The attributes that connect the collider are in a list, so you can use more than
 > Place a nurbsSphere or implicitSphere as a child of end-joint and connect `Radius`.  
 > ![visualize_radius](.images/visualize_radius.png)
 
+#### Sphere, Capsule, Infinite plane
+
+![collisions](.images/collisions.gif)
+
+The required connections for these three types of collisions are as follows.  
+
+- `Sphere Col Matrix` : Connect the sphere collider worldMatrix.  
+- `Sphere Col Radius` : Radius of sphere collider.  
+- `Capsule Col Matrix A` `Capsule Col Matrix B` : Connect worldMatrix on one side of the capsule collider.  
+- `Capsule Col Radius A` `Capsule Col Radius B` : Connect the radius of one side of the capsule collider.  
+- `Infinite Plane Col Matrix` : Connect worldMatrix of infinite plane collider.  
+
 > 💡**Note**  
-> Colliders do not necessarily need to use [expcol](https://github.com/akasaki1211/maya_expressionCollision). It can be anything as long as the required attributes are connected.  
+> Colliders can be created with [maya_expressionCollision (expcol)](https://github.com/akasaki1211/maya_expressionCollision), but it is not necessary to use it. Any collider can be used as long as the required attributes are connected.  
 > ![collider_note](.images/collider_note.gif)  
+
+#### Mesh (*Experimental)
+
+![mesh_collision](.images/mesh_collision.gif)
+
+Any mesh can be used for collisions. Compared to other types of collisions, mesh collisions are more loaded and less stable, so their use is not recommended.  
+
+- `Mesh Collider` : Connect worldMesh of any mesh.  
+- `Mesh Col Cutoff` : Max distance for mesh collision detection.  
+
+> 💡**Note**  
+> - As this is an **experimental** feature, it may be unstable.  
+> - All edges of the collision mesh should be made with **soft edges**.  
+> - If the collision mesh has a large number of polygons, it will increase the processing load.  
+> - If the collision mesh is not a closed shape, use `Mesh Col Cutoff` to control the range of detections.  
+> 
+> ![mesh_col_cutoff](.images/mesh_col_cutoff.gif)  
+
+#### Ground
+
+![ground_collision](.images/ground_collision.png)
+
+A horizontal infinite plane collision. It can be used only with the enable and ground height attribute, no connections are needed.  
+
+- `Enable Ground Col` : Enable ground collision.  
+- `Ground Height` : Height of the ground.  
+
 
 ### Angle Limitation
 
@@ -100,7 +134,7 @@ The `Angle Limit` attribute allows for limiting the rotation angle of bones. It 
 
 > 💡**Visualize Angle**  
 > Place an implicitCone node and a transform nodes in the same space as the joint, and set and connect their attributes as in the following image:  
-> ![visualize_angle](.images/visualize_angle.png)
+> ![visualize_angle](.images/visualize_angle.png)  
 > ⚠️If joint.ty and tz contain values, cone direction will not match accurately.  
 
 ### Specify Target Pose
@@ -149,7 +183,7 @@ Pre-built `boneDynamicsNode.mll` in the [plug-ins](./plug-ins) folder. Install t
 |Maya 2022 Update 5 win64|[Download](./plug-ins/2022/boneDynamicsNode.mll)|
 |Maya 2023 Update 3 win64|[Download](./plug-ins/2023/boneDynamicsNode.mll)|
 |Maya 2024 Update 2 win64|[Download](./plug-ins/2024/boneDynamicsNode.mll)|
-|Maya 2025 win64|[Download](./plug-ins/2025/boneDynamicsNode.mll)|
+|Maya 2025 Update 1 win64|[Download](./plug-ins/2025/boneDynamicsNode.mll)|
 
 ## How to Build  
 For example, Maya 2024 in Windows:  
@@ -166,10 +200,6 @@ cmake . -Bbuild_2024 -G "Visual Studio 17 2022" -A x64
 ```
 cmake --build build_2024
 ```
-
-## TODO
-- [ ] Additional Force  
-- [ ] Stretchable
 
 ## Links
 - [Maya用お手軽ボーンダイナミクスノード「boneDynamicsNode」詳細解説 - Qiita](https://qiita.com/akasaki1211/items/ddae66ec2d89d21bb2f4)

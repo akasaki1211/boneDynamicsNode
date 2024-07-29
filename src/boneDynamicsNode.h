@@ -6,6 +6,8 @@
 #include <maya/MFnCompoundAttribute.h>
 #include <maya/MFnMatrixAttribute.h>
 #include <maya/MFnUnitAttribute.h>
+#include <maya/MFnTypedAttribute.h>
+#include <maya/MFnMesh.h>
 #include <maya/MTime.h>
 #include <maya/MVector.h>
 #include <maya/MPoint.h>
@@ -85,6 +87,9 @@ public:
 
     static MObject s_iPlaneCollider;    // infinitePlaneCollider array
     static MObject s_iPlaneColMtx;      // infinitePlaneCollider matrix
+
+    static MObject s_meshCollider;      // meshCollider array
+    static MObject s_meshColCutoff;     // max distance for mesh collision detection
     
     // output
     static MObject s_outputRotate;       // output euler rotation
@@ -94,6 +99,7 @@ private:
     double degToRad(double deg);
     void angleLimit(const MVector& pivot, const MVector& a, MVector& b, const double limitAngle);
     void distanceConstraint(const MVector& pivot, MVector& point, double distance);
+    void getClosestPoint(const MObject& mesh, const MPoint& position, MPoint& closestPoint, MVector& closestNormal);
 
     static const MEulerRotation::RotationOrder ROTATION_ORDER = MEulerRotation::RotationOrder::kXYZ;
     
