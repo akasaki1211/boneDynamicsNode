@@ -721,7 +721,12 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
             // If it is penetrated in the surface, it will be pushed out
             if (distanceContactPoint - radius < 0.0) {
                 // If it is completely penetrated, it uses the closest normal to push out, if it is only in contact, it uses the contactVec to push out.
-                nextPosition = MVector(closestPoint) + ((distanceContactPoint < 0) ? closestNormal : contactVec.normal()) * radius;
+                MVector pushOutPos = MVector(closestPoint) + ((distanceContactPoint < 0) ? closestNormal : contactVec.normal()) * radius;
+                
+                // If the position after push out is within meshColCutoff from the current position, it will be pushed out.
+                if ((nextPosition - pushOutPos).length() < meshColCutoff) {
+                    nextPosition = pushOutPos;
+                }
             }
         };
             
