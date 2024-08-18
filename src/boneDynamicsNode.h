@@ -39,6 +39,7 @@ public:
 
     // transform
     static MObject s_offsetMatrix;      // offset current-position
+    static MObject s_offsetMatrixWeight;
 
     static MObject s_boneTranslate;
     static MObject s_boneJointOrient;

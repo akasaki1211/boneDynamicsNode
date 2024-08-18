@@ -147,7 +147,8 @@ The converging pose can be manipulated by duplicating the joint-chain and connec
 
 ### Offset Transform
 
-You can cancel the transform by connecting the worldMatrix of the node you do not want affected (such as the root controller of character) to the `Offset Matrix`.
+You can cancel the transform by connecting the worldMatrix of the node you do not want affected (such as the root controller of character) to the `Offset Matrix`.  
+The `Offset Matrix Weight` attribute adjusts the amount of influence. Please note that he `Offset Matrix Weight` must be **the same values** for all joints in the chain, otherwise unnatural behavior will occur.  
 
 ![offset_matrix](.images/offset_matrix.gif)
 

@@ -9,6 +9,7 @@ MObject boneDynamicsNode::s_resetTime;
 MObject boneDynamicsNode::s_fps;
 
 MObject boneDynamicsNode::s_offsetMatrix;
+MObject boneDynamicsNode::s_offsetMatrixWeight;
 
 MObject boneDynamicsNode::s_boneTranslate;
 MObject boneDynamicsNode::s_boneJointOrient;
@@ -103,6 +104,11 @@ MStatus boneDynamicsNode::initialize()
     // input attributes
     s_offsetMatrix = mAttr.create("offsetMatrix", "ofmtx");
     mAttr.setKeyable(true);
+
+    s_offsetMatrixWeight = nAttr.create("offsetMatrixWeight", "ofmtxw", MFnNumericData::kDouble, 1.0);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0);
+    nAttr.setMax(1);
 
     x = nAttr.create("boneTranslateX", "btx", MFnNumericData::kDouble, 0.0);
     y = nAttr.create("boneTranslateY", "bty", MFnNumericData::kDouble, 0.0);
@@ -286,6 +292,7 @@ MStatus boneDynamicsNode::initialize()
     addAttribute(s_fps);
 
     addAttribute(s_offsetMatrix);
+    addAttribute(s_offsetMatrixWeight);
 
     addAttribute(s_boneTranslate);
     addAttribute(s_boneJointOrient);
@@ -339,6 +346,7 @@ MStatus boneDynamicsNode::initialize()
     attributeAffects(s_fps, s_outputRotate);
 
     attributeAffects(s_offsetMatrix, s_outputRotate);
+    attributeAffects(s_offsetMatrixWeight, s_outputRotate);
 
     attributeAffects(s_boneTranslate, s_outputRotate);
     attributeAffects(s_boneJointOrient, s_outputRotate);
@@ -462,6 +470,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
 
     // input values
     const MMatrix& offsetMatrix = data.inputValue(s_offsetMatrix).asMatrix();
+    const double offsetMatrixWeight = data.inputValue(s_offsetMatrixWeight).asDouble();
 
     const MVector& boneTranslate = data.inputValue(s_boneTranslate).asVector();
     const MVector& boneJointOrient = data.inputValue(s_boneJointOrient).asVector();
@@ -554,7 +563,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
 
     // position offset
     const MPoint offsetedPosition = MPoint(m_position) * m_prevOffsetMatrix.inverse() * offsetMatrix;
-    m_position = MVector(offsetedPosition);
+    m_position = MVector(offsetedPosition) * offsetMatrixWeight + m_position * (1.0 - offsetMatrixWeight);
     
     // velocity damping
     m_velocity = m_velocity * (1.0 - damping);
