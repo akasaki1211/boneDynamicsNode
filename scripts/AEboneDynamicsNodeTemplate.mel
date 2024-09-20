@@ -55,14 +55,15 @@ global proc AEboneDynamicsNodeTemplate(string $nodeName)
                 editorTemplate -addControl "meshColCutoff";
             editorTemplate -endLayout;
 
-            // include/call base class/node attributes
-            AEdependNodeTemplate $nodeName;
-
             //suppressed attributes
             editorTemplate -suppress "outputRotate";
             
+            // include/call base class/node attributes
+            AEdependNodeTemplate $nodeName;
+
+            editorTemplate -addExtraControls;
+
         editorTemplate -endLayout;
 
-    editorTemplate -addExtraControls;
     editorTemplate -endScrollLayout;
 }
