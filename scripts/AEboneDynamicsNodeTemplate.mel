@@ -36,6 +36,11 @@ global proc AEboneDynamicsNodeTemplate(string $nodeName)
                 editorTemplate -addControl "mass";
                 editorTemplate -addControl "gravity";
                 editorTemplate -addControl "gravityMultiply";
+                editorTemplate -addControl "enableTurbulence";
+                editorTemplate -addControl "turbulenceSeed";
+                editorTemplate -addControl "turbulenceStrength";
+                editorTemplate -addControl "turbulenceVectorChangeScale";
+                editorTemplate -addControl "turbulenceVectorChangeMax";
             editorTemplate -endLayout;
 
             editorTemplate -beginLayout "Limits" -collapse true;

@@ -1,5 +1,7 @@
 #include "boneDynamicsNode.h"
 
+#include <algorithm>
+
 MTypeId boneDynamicsNode::s_id(0x7b001);
 
 MObject boneDynamicsNode::s_enable;
@@ -30,6 +32,12 @@ MObject boneDynamicsNode::s_mass;
 MObject boneDynamicsNode::s_gravityMultiply;
 MObject boneDynamicsNode::s_gravity;
 
+MObject boneDynamicsNode::s_enableTurbulence;
+MObject boneDynamicsNode::s_turbulenceSeed;
+MObject boneDynamicsNode::s_turbulenceStrength;
+MObject boneDynamicsNode::m_turbulenceVectorChangeScale;
+MObject boneDynamicsNode::m_turbulenceVectorChangeMax;
+
 MObject boneDynamicsNode::s_enableAngleLimit;
 MObject boneDynamicsNode::s_angleLimit;
 
@@ -58,14 +66,9 @@ MObject boneDynamicsNode::s_meshColCutoff;
 
 MObject boneDynamicsNode::s_outputRotate;
 
-boneDynamicsNode::boneDynamicsNode()
-{
-    m_init = true;
-}
+boneDynamicsNode::boneDynamicsNode() : m_init(true) {}
 
-boneDynamicsNode::~boneDynamicsNode()
-{
-}
+boneDynamicsNode::~boneDynamicsNode(){}
 
 void* boneDynamicsNode::creator()
 {
@@ -187,6 +190,26 @@ MStatus boneDynamicsNode::initialize()
     nAttr.setKeyable(true);
     nAttr.setMin(0);
     nAttr.setMax(1);
+
+    // turbulence
+    s_enableTurbulence = nAttr.create("enableTurbulence", "enw", MFnNumericData::kBoolean, false);
+    nAttr.setKeyable(true);
+
+    s_turbulenceSeed = nAttr.create("turbulenceSeed", "wsd", MFnNumericData::kInt, 0);
+    nAttr.setMin(0);
+    nAttr.setKeyable(true);
+
+    s_turbulenceStrength = nAttr.create("turbulenceStrength", "wst", MFnNumericData::kDouble, 10.0);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0);
+
+    m_turbulenceVectorChangeScale = nAttr.create("turbulenceVectorChangeScale", "wvcs", MFnNumericData::kDouble, 0.05);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0);
+
+    m_turbulenceVectorChangeMax = nAttr.create("turbulenceVectorChangeMax", "wvcm", MFnNumericData::kDouble, 0.1);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0);
 
     // angle limit
     s_enableAngleLimit = nAttr.create("enableAngleLimit", "eal", MFnNumericData::kBoolean, false);
@@ -313,6 +336,12 @@ MStatus boneDynamicsNode::initialize()
     addAttribute(s_gravity);
     addAttribute(s_gravityMultiply);
 
+    addAttribute(s_enableTurbulence);
+    addAttribute(s_turbulenceSeed);
+    addAttribute(s_turbulenceStrength);
+    addAttribute(m_turbulenceVectorChangeScale);
+    addAttribute(m_turbulenceVectorChangeMax);
+
     addAttribute(s_enableAngleLimit);
     addAttribute(s_angleLimit);
 
@@ -367,6 +396,12 @@ MStatus boneDynamicsNode::initialize()
     attributeAffects(s_gravity, s_outputRotate);
     attributeAffects(s_gravityMultiply, s_outputRotate);
 
+    attributeAffects(s_enableTurbulence, s_outputRotate);
+    attributeAffects(s_turbulenceSeed, s_outputRotate);
+    attributeAffects(s_turbulenceStrength, s_outputRotate);
+    attributeAffects(m_turbulenceVectorChangeScale, s_outputRotate);
+    attributeAffects(m_turbulenceVectorChangeMax, s_outputRotate);
+
     attributeAffects(s_enableAngleLimit, s_outputRotate);
     attributeAffects(s_angleLimit, s_outputRotate);
 
@@ -388,7 +423,7 @@ MStatus boneDynamicsNode::initialize()
     attributeAffects(s_iPlaneCollider, s_outputRotate);
     attributeAffects(s_meshCollider, s_outputRotate);
     attributeAffects(s_meshColCutoff, s_outputRotate);
-    
+
     return MS::kSuccess;
 }
 
@@ -444,6 +479,34 @@ void boneDynamicsNode::getClosestPoint(const MObject& mesh, const MPoint& point,
 {
     MFnMesh fnMesh(mesh);
     fnMesh.getClosestPointAndNormal(point, closestPoint, closestNormal, MSpace::kWorld);
+}
+
+uint32_t boneDynamicsNode::rotl(const uint32_t x, int k) {
+    return (x << k) | (x >> (32 - k));
+}
+
+double boneDynamicsNode::rand_double(const double scale) {
+
+    // xoshiro128++
+
+    uint32_t* s = m_rngState;
+    uint32_t result = rotl(s[0] + s[3], 7) + s[0];
+    uint32_t t = s[1] << 9;
+
+    s[2] ^= s[0];
+    s[3] ^= s[1];
+    s[1] ^= s[2];
+    s[0] ^= s[3];
+
+    s[2] ^= t;
+
+    s[3] = rotl(s[3], 11);
+
+    // normalize
+    double normalized = result * 2.3283064365386963e-10;
+    
+    // scale
+    return normalized * (scale * 2) - scale;
 }
 
 MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
@@ -541,12 +604,26 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     
     const MTime& time = data.inputValue(s_time).asTime();
     const MTime& resetTime = data.inputValue(s_resetTime).asTime();
+
+    const bool enableTurbulence = data.inputValue(s_enableTurbulence).asBool();
     
     // reset(init)
     if (time <= resetTime || m_init) {
         m_prevOffsetMatrix = offsetMatrix;
         m_position = endWorldTranslate;
         m_velocity = MVector();
+
+        if (enableTurbulence) {
+            m_turbulenceVector = MVector();
+            m_turbulenceVectorChange = MVector();
+            m_lastSeed = -1;
+            m_lastFrame = -1;
+            m_rngState[0] = 0;
+            m_rngState[1] = 0;
+            m_rngState[2] = 0;
+            m_rngState[3] = 0;
+        }
+
         m_init = false;
         
         outputRotateHandle.set3Double(rotationOffsetEuler.x, rotationOffsetEuler.y, rotationOffsetEuler.z);
@@ -570,6 +647,37 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     
     // add velocity
     MVector nextPosition = m_position + (m_velocity * dt);
+
+    // turbulence vector
+    if (enableTurbulence) {
+        int frame = static_cast<int>(time.as(MTime::uiUnit()));
+        int turbulenceSeed = data.inputValue(s_turbulenceSeed).asInt();
+
+        if (turbulenceSeed != m_lastSeed || frame != m_lastFrame) {
+
+            // Init xoshiro128++
+            uint32_t s = static_cast<uint32_t>(turbulenceSeed) ^ (static_cast<uint32_t>(frame) * 0x9e3779b9u);
+            for (int i = 0; i < 4; ++i) {
+                s = s * 1664525u + 1013904223u;
+                m_rngState[i] = s;
+            }
+            m_lastSeed = turbulenceSeed;
+            m_lastFrame = frame;
+        }
+
+        
+        const double turbulenceVectorChangeScale = data.inputValue(m_turbulenceVectorChangeScale).asDouble();
+        const double turbulenceVectorChangeMax = data.inputValue(m_turbulenceVectorChangeMax).asDouble();
+
+        m_turbulenceVectorChange += MVector(rand_double(turbulenceVectorChangeScale), rand_double(turbulenceVectorChangeScale), rand_double(turbulenceVectorChangeScale));
+
+        m_turbulenceVectorChange.x = std::clamp(m_turbulenceVectorChange.x, -turbulenceVectorChangeMax, turbulenceVectorChangeMax);
+        m_turbulenceVectorChange.y = std::clamp(m_turbulenceVectorChange.y, -turbulenceVectorChangeMax, turbulenceVectorChangeMax);
+        m_turbulenceVectorChange.z = std::clamp(m_turbulenceVectorChange.z, -turbulenceVectorChangeMax, turbulenceVectorChangeMax);
+
+        m_turbulenceVector += m_turbulenceVectorChange;
+        m_turbulenceVector.normalize();
+    }
     
     // external force
     MVector external_force;
@@ -577,6 +685,11 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     external_force += ((endWorldTranslate - nextPosition) * elasticity) / mass;
     // gravity
     external_force += gravity * gravityMultiply;
+    // turbulence
+    if (enableTurbulence) {
+        const double turbulenceStrength = data.inputValue(s_turbulenceStrength).asDouble();
+        external_force += (m_turbulenceVector * turbulenceStrength) / mass;
+    }
     // add external force
     nextPosition += external_force * dt * dt;
     

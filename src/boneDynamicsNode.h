@@ -62,6 +62,13 @@ public:
     static MObject s_gravity;           // gravity vector
     static MObject s_gravityMultiply;
 
+    // turbulence
+    static MObject s_enableTurbulence;
+    static MObject s_turbulenceSeed;
+    static MObject s_turbulenceStrength;
+    static MObject m_turbulenceVectorChangeScale;  // rate of change of the change-vector
+    static MObject m_turbulenceVectorChangeMax;    // max value of the change-vector
+
     // angle limit
     static MObject s_enableAngleLimit;  // use angle limit
     static MObject s_angleLimit;        // angle limit
@@ -101,6 +108,9 @@ private:
     void angleLimit(const MVector& pivot, const MVector& a, MVector& b, const double limitAngle);
     void distanceConstraint(const MVector& pivot, MVector& point, double distance);
     void getClosestPoint(const MObject& mesh, const MPoint& position, MPoint& closestPoint, MVector& closestNormal);
+    
+    inline uint32_t rotl(const uint32_t x, int k);
+    double rand_double(const double scale);
 
     static const MEulerRotation::RotationOrder ROTATION_ORDER = MEulerRotation::RotationOrder::kXYZ;
     
@@ -108,4 +118,10 @@ private:
     MMatrix m_prevOffsetMatrix;
     MVector m_position;
     MVector m_velocity;
+
+    int m_lastSeed;
+    int m_lastFrame;
+    uint32_t m_rngState[4];
+    MVector m_turbulenceVector;       // turbulence vector
+    MVector m_turbulenceVectorChange; // vector that changes the turbulenceVector
 };
