@@ -36,6 +36,14 @@ global proc AEboneDynamicsNodeTemplate(string $nodeName)
                 editorTemplate -addControl "mass";
                 editorTemplate -addControl "gravity";
                 editorTemplate -addControl "gravityMultiply";
+
+                editorTemplate -addSeparator;
+
+                editorTemplate -addControl "additionalForce";
+                editorTemplate -addControl "additionalForceScale";
+                
+                editorTemplate -addSeparator;
+
                 editorTemplate -addControl "enableTurbulence";
                 editorTemplate -addControl "turbulenceSeed";
                 editorTemplate -addControl "turbulenceStrength";
@@ -56,7 +64,7 @@ global proc AEboneDynamicsNodeTemplate(string $nodeName)
                 editorTemplate -addControl "sphereCollider";
                 editorTemplate -addControl "capsuleCollider";
                 editorTemplate -addControl "infinitePlaneCollider";
-                editorTemplate -addControl "meshCollider";
+                editorTemplate -label "Mesh Collider (*Experimental)" -addControl "meshCollider";
                 editorTemplate -addControl "meshColCutoff";
             editorTemplate -endLayout;
 

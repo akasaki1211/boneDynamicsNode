@@ -31,6 +31,8 @@ MObject boneDynamicsNode::s_stiffness;
 MObject boneDynamicsNode::s_mass;
 MObject boneDynamicsNode::s_gravityMultiply;
 MObject boneDynamicsNode::s_gravity;
+MObject boneDynamicsNode::s_additionalForce;
+MObject boneDynamicsNode::s_additionalForceScale;
 
 MObject boneDynamicsNode::s_enableTurbulence;
 MObject boneDynamicsNode::s_turbulenceSeed;
@@ -191,6 +193,16 @@ MStatus boneDynamicsNode::initialize()
     nAttr.setMin(0);
     nAttr.setMax(1);
 
+    x = nAttr.create("additionalForceX", "afx", MFnNumericData::kDouble, 0.0);
+    y = nAttr.create("additionalForceY", "afy", MFnNumericData::kDouble, 0.0);
+    z = nAttr.create("additionalForceZ", "afz", MFnNumericData::kDouble, 0.0);
+    s_additionalForce = nAttr.create("additionalForce", "af", x, y, z);
+    nAttr.setKeyable(true);
+
+    s_additionalForceScale = nAttr.create("additionalForceScale", "afs", MFnNumericData::kDouble, 1.0);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0);
+
     // turbulence
     s_enableTurbulence = nAttr.create("enableTurbulence", "enw", MFnNumericData::kBoolean, false);
     nAttr.setKeyable(true);
@@ -335,7 +347,9 @@ MStatus boneDynamicsNode::initialize()
     addAttribute(s_mass);
     addAttribute(s_gravity);
     addAttribute(s_gravityMultiply);
-
+    addAttribute(s_additionalForce);
+    addAttribute(s_additionalForceScale);
+    
     addAttribute(s_enableTurbulence);
     addAttribute(s_turbulenceSeed);
     addAttribute(s_turbulenceStrength);
@@ -395,6 +409,8 @@ MStatus boneDynamicsNode::initialize()
     attributeAffects(s_mass, s_outputRotate);
     attributeAffects(s_gravity, s_outputRotate);
     attributeAffects(s_gravityMultiply, s_outputRotate);
+    attributeAffects(s_additionalForce, s_outputRotate);
+    attributeAffects(s_additionalForceScale, s_outputRotate);
 
     attributeAffects(s_enableTurbulence, s_outputRotate);
     attributeAffects(s_turbulenceSeed, s_outputRotate);
@@ -599,8 +615,10 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     const double elasticity = data.inputValue(s_elasticity).asDouble();
     const double stiffness = data.inputValue(s_stiffness).asDouble();
     const double mass = data.inputValue(s_mass).asDouble();
-    const double gravityMultiply = data.inputValue(s_gravityMultiply).asDouble();
     const MVector& gravity = data.inputValue(s_gravity).asVector();
+    const double gravityMultiply = data.inputValue(s_gravityMultiply).asDouble();
+    const MVector& additionalForce = data.inputValue(s_additionalForce).asVector();
+    const double additionalForceScale = data.inputValue(s_additionalForceScale).asDouble();
     
     const MTime& time = data.inputValue(s_time).asTime();
     const MTime& resetTime = data.inputValue(s_resetTime).asTime();
@@ -683,6 +701,8 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     MVector external_force;
     // spring
     external_force += ((endWorldTranslate - nextPosition) * elasticity) / mass;
+    // additional force
+    external_force += (additionalForce * additionalForceScale) / mass;
     // gravity
     external_force += gravity * gravityMultiply;
     // turbulence

@@ -61,6 +61,8 @@ public:
     static MObject s_mass;
     static MObject s_gravity;           // gravity vector
     static MObject s_gravityMultiply;
+    static MObject s_additionalForce;   // additional force
+    static MObject s_additionalForceScale;
 
     // turbulence
     static MObject s_enableTurbulence;
