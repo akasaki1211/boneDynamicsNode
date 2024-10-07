@@ -27,6 +27,7 @@ MObject boneDynamicsNode::s_endScale;
 
 MObject boneDynamicsNode::s_damping;
 MObject boneDynamicsNode::s_elasticity;
+MObject boneDynamicsNode::s_elasticForceFunction;
 MObject boneDynamicsNode::s_stiffness;
 MObject boneDynamicsNode::s_mass;
 MObject boneDynamicsNode::s_gravityMultiply;
@@ -68,7 +69,12 @@ MObject boneDynamicsNode::s_meshColCutoff;
 
 MObject boneDynamicsNode::s_outputRotate;
 
-boneDynamicsNode::boneDynamicsNode() : m_init(true) {}
+boneDynamicsNode::boneDynamicsNode() : m_init(true), m_lastSeed(-1), m_lastFrame(-1) {
+    m_rngState[0] = 0;
+    m_rngState[1] = 0;
+    m_rngState[2] = 0;
+    m_rngState[3] = 0;
+}
 
 boneDynamicsNode::~boneDynamicsNode(){}
 
@@ -89,6 +95,7 @@ MStatus boneDynamicsNode::initialize()
     MFnMatrixAttribute mAttr;
     MFnUnitAttribute uAttr;
     MFnTypedAttribute tAttr;
+    MFnEnumAttribute eAttr;
     MObject x, y, z;
 
     s_enable = nAttr.create("enable", "en", MFnNumericData::kBoolean, true);
@@ -172,6 +179,12 @@ MStatus boneDynamicsNode::initialize()
     s_elasticity = nAttr.create("elasticity", "elas", MFnNumericData::kDouble, 30.0);
     nAttr.setKeyable(true);
     nAttr.setMin(0);
+
+    s_elasticForceFunction = eAttr.create("elasticForceFunction", "eff", 0);
+    eAttr.addField("Linear", 0);
+    eAttr.addField("Quadratic", 1);
+    eAttr.addField("Cubic", 2);
+    eAttr.setKeyable(true);
 
     s_stiffness = nAttr.create("stiffness", "stif", MFnNumericData::kDouble, 0.0);
     nAttr.setKeyable(true);
@@ -343,6 +356,7 @@ MStatus boneDynamicsNode::initialize()
 
     addAttribute(s_damping);
     addAttribute(s_elasticity);
+    addAttribute(s_elasticForceFunction);
     addAttribute(s_stiffness);
     addAttribute(s_mass);
     addAttribute(s_gravity);
@@ -405,6 +419,7 @@ MStatus boneDynamicsNode::initialize()
     
     attributeAffects(s_damping, s_outputRotate);
     attributeAffects(s_elasticity, s_outputRotate);
+    attributeAffects(s_elasticForceFunction, s_outputRotate);
     attributeAffects(s_stiffness, s_outputRotate);
     attributeAffects(s_mass, s_outputRotate);
     attributeAffects(s_gravity, s_outputRotate);
@@ -655,6 +670,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     //double dt = 1.0 / getFPS();
     const double fps = data.inputValue(s_fps).asDouble();
     const double dt = 1.0 / fps;
+    const double dt2 = dt * dt;
 
     // position offset
     const MPoint offsetedPosition = MPoint(m_position) * m_prevOffsetMatrix.inverse() * offsetMatrix;
@@ -682,36 +698,65 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
             m_lastSeed = turbulenceSeed;
             m_lastFrame = frame;
         }
-
         
         const double turbulenceVectorChangeScale = data.inputValue(m_turbulenceVectorChangeScale).asDouble();
         const double turbulenceVectorChangeMax = data.inputValue(m_turbulenceVectorChangeMax).asDouble();
 
         m_turbulenceVectorChange += MVector(rand_double(turbulenceVectorChangeScale), rand_double(turbulenceVectorChangeScale), rand_double(turbulenceVectorChangeScale));
 
-        m_turbulenceVectorChange.x = std::clamp(m_turbulenceVectorChange.x, -turbulenceVectorChangeMax, turbulenceVectorChangeMax);
-        m_turbulenceVectorChange.y = std::clamp(m_turbulenceVectorChange.y, -turbulenceVectorChangeMax, turbulenceVectorChangeMax);
-        m_turbulenceVectorChange.z = std::clamp(m_turbulenceVectorChange.z, -turbulenceVectorChangeMax, turbulenceVectorChangeMax);
+        m_turbulenceVectorChange.x = std::max(-turbulenceVectorChangeMax, std::min(m_turbulenceVectorChange.x, turbulenceVectorChangeMax));
+        m_turbulenceVectorChange.y = std::max(-turbulenceVectorChangeMax, std::min(m_turbulenceVectorChange.y, turbulenceVectorChangeMax));
+        m_turbulenceVectorChange.z = std::max(-turbulenceVectorChangeMax, std::min(m_turbulenceVectorChange.z, turbulenceVectorChangeMax));
 
         m_turbulenceVector += m_turbulenceVectorChange;
         m_turbulenceVector.normalize();
     }
-    
+
     // external force
-    MVector external_force;
-    // spring
-    external_force += ((endWorldTranslate - nextPosition) * elasticity) / mass;
-    // additional force
-    external_force += (additionalForce * additionalForceScale) / mass;
     // gravity
-    external_force += gravity * gravityMultiply;
-    // turbulence
+    MVector externalForce = gravity * gravityMultiply;
+
+    // spring
+    MDataHandle& elasticForceFunctionHandle = data.inputValue(s_elasticForceFunction);
+    const int elasticForceFunctionValue = elasticForceFunctionHandle.asShort();
+    
+    const MVector springVector = (endWorldTranslate - nextPosition);
+    const double springVectorLength = springVector.length();
+    MVector springForce;
+
+    switch (elasticForceFunctionValue) {
+        case 0: // Linear
+            springForce = (springVector * elasticity) / mass;
+            break;
+        case 1: // Quadratic
+            springForce = (springVector * ((springVectorLength + 1.0) * elasticity)) / mass;
+            break;
+        case 2: // Cubic
+            springForce = (springVector * ((springVectorLength + 1.0) * (springVectorLength + 1.0) * elasticity)) / mass;
+            break;
+        default:
+            break;
+    }
+    
+    // clamp spring force
+    if (springForce.length() > springVectorLength / dt2)
+    {
+        springForce = springForce.normal() * (springVectorLength / dt2);
+    }
+
+    externalForce += springForce;
+    
+    // additional force
+    externalForce += (additionalForce * additionalForceScale) / mass;
+    
+    // turbulent force
     if (enableTurbulence) {
         const double turbulenceStrength = data.inputValue(s_turbulenceStrength).asDouble();
-        external_force += (m_turbulenceVector * turbulenceStrength) / mass;
+        externalForce += (m_turbulenceVector * turbulenceStrength) / mass;
     }
+
     // add external force
-    nextPosition += external_force * dt * dt;
+    nextPosition += externalForce * dt2;
     
     // keep position
     nextPosition += (m_position - nextPosition) * stiffness;

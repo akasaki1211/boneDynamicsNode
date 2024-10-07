@@ -7,6 +7,7 @@
 #include <maya/MFnMatrixAttribute.h>
 #include <maya/MFnUnitAttribute.h>
 #include <maya/MFnTypedAttribute.h>
+#include <maya/MFnEnumAttribute.h>
 #include <maya/MFnMesh.h>
 #include <maya/MTime.h>
 #include <maya/MVector.h>
@@ -57,6 +58,7 @@ public:
     // dynamics
     static MObject s_damping;           // velocity damping
     static MObject s_elasticity;        // spring coefficient
+    static MObject s_elasticForceFunction;
     static MObject s_stiffness;         // power to stay in place
     static MObject s_mass;
     static MObject s_gravity;           // gravity vector

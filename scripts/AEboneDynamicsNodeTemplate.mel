@@ -32,6 +32,7 @@ global proc AEboneDynamicsNodeTemplate(string $nodeName)
             editorTemplate -beginLayout "Dynamics Attributes" -collapse false;
                 editorTemplate -addControl "damping";
                 editorTemplate -addControl "elasticity";
+                editorTemplate -addControl "elasticForceFunction";
                 editorTemplate -addControl "stiffness";
                 editorTemplate -addControl "mass";
                 editorTemplate -addControl "gravity";
