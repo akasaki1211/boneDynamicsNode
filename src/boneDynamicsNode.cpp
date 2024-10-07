@@ -562,10 +562,11 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         return MS::kSuccess;
     }
 
-    // input values
+    // offset matrix
     const MMatrix& offsetMatrix = data.inputValue(s_offsetMatrix).asMatrix();
     const double offsetMatrixWeight = data.inputValue(s_offsetMatrixWeight).asDouble();
 
+    // bone
     const MVector& boneTranslate = data.inputValue(s_boneTranslate).asVector();
     const MVector& boneJointOrient = data.inputValue(s_boneJointOrient).asVector();
     const MMatrix& boneParentMatrix = data.inputValue(s_boneParentMatrix).asMatrix();
@@ -574,39 +575,32 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     const MVector& boneInverseScaleInput = data.inputValue(s_boneInverseScale).asVector();
     const MVector boneInverseScale(1.0 / boneInverseScaleInput.x, 1.0 / boneInverseScaleInput.y, 1.0 / boneInverseScaleInput.z);
     
+    // end
     const MVector& endTranslate = data.inputValue(s_endTranslate).asVector();
     const MVector& endScale = data.inputValue(s_endScale).asVector();
 
+    // rotation offset
     const MVector& rotationOffset = data.inputValue(s_rotationOffset).asVector();
 
-    // get rotation offset matrix
+    // rotation offset matrix
     const MEulerRotation rotationOffsetEuler(rotationOffset, ROTATION_ORDER);
     const MMatrix roMatrix = rotationOffsetEuler.asMatrix();
-    MMatrix roInverseMatrix;
-    if (!roMatrix.isEquivalent(MMatrix::identity))
-    {
-        roInverseMatrix = roMatrix.inverse();
-    }
+    const MMatrix roInverseMatrix = !roMatrix.isEquivalent(MMatrix::identity) ? roMatrix.inverse() : MMatrix::identity;
 
-    // get joint orient matrix
-    const MEulerRotation boneJointOrientEuler(boneJointOrient, ROTATION_ORDER);
-    const MMatrix joMatrix = boneJointOrientEuler.asMatrix();
-    MMatrix joInverseMatrix;
-    if (!joMatrix.isEquivalent(MMatrix::identity))
-    {
-        joInverseMatrix = joMatrix.inverse();
-    }
+    // joint orient matrix
+    const MMatrix joMatrix = MEulerRotation(boneJointOrient, ROTATION_ORDER).asMatrix();
+    const MMatrix joInverseMatrix = !joMatrix.isEquivalent(MMatrix::identity) ? joMatrix.inverse() : MMatrix::identity;
 
-    // get bone matrix
+    // bone matrix
     MTransformationMatrix boneTransformationMatrix;
     boneTransformationMatrix.setTranslation(boneTranslate, MSpace::kWorld);
     const MMatrix boneMatrix = boneTransformationMatrix.asMatrix();
     
-    // calc bone world position
+    // bone world position
     const MPoint boneWorldTranslatePoint = MPoint(boneTranslate) * boneParentMatrix;
     const MVector boneWorldTranslate(boneWorldTranslatePoint);
 
-    // calc end world position
+    // end world position
     const MPoint scaledEndTranslate(
         endTranslate.x * boneScale.x * boneInverseScale.x, 
         endTranslate.y * boneScale.y * boneInverseScale.y, 
@@ -625,7 +619,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     // bone length
     const double distance = (endWorldTranslate - boneWorldTranslate).length();
 
-    // dynamics
+    // dynamic parameters
     const double damping = data.inputValue(s_damping).asDouble();
     const double elasticity = data.inputValue(s_elasticity).asDouble();
     const double stiffness = data.inputValue(s_stiffness).asDouble();
@@ -640,7 +634,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
 
     const bool enableTurbulence = data.inputValue(s_enableTurbulence).asBool();
     
-    // reset(init)
+    // reset and initialization
     if (time <= resetTime || m_init) {
         m_prevOffsetMatrix = offsetMatrix;
         m_position = endWorldTranslate;
@@ -677,7 +671,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     m_position = MVector(offsetedPosition) * offsetMatrixWeight + m_position * (1.0 - offsetMatrixWeight);
     
     // velocity damping
-    m_velocity = m_velocity * (1.0 - damping);
+    m_velocity *= (1.0 - damping);
     
     // add velocity
     MVector nextPosition = m_position + (m_velocity * dt);
@@ -702,7 +696,11 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         const double turbulenceVectorChangeScale = data.inputValue(m_turbulenceVectorChangeScale).asDouble();
         const double turbulenceVectorChangeMax = data.inputValue(m_turbulenceVectorChangeMax).asDouble();
 
-        m_turbulenceVectorChange += MVector(rand_double(turbulenceVectorChangeScale), rand_double(turbulenceVectorChangeScale), rand_double(turbulenceVectorChangeScale));
+        m_turbulenceVectorChange += MVector(
+            rand_double(turbulenceVectorChangeScale), 
+            rand_double(turbulenceVectorChangeScale), 
+            rand_double(turbulenceVectorChangeScale)
+        );
 
         m_turbulenceVectorChange.x = std::max(-turbulenceVectorChangeMax, std::min(m_turbulenceVectorChange.x, turbulenceVectorChangeMax));
         m_turbulenceVectorChange.y = std::max(-turbulenceVectorChangeMax, std::min(m_turbulenceVectorChange.y, turbulenceVectorChangeMax));
@@ -716,15 +714,14 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     // gravity
     MVector externalForce = gravity * gravityMultiply;
 
-    // spring
-    MDataHandle& elasticForceFunctionHandle = data.inputValue(s_elasticForceFunction);
-    const int elasticForceFunctionValue = elasticForceFunctionHandle.asShort();
-    
+    // spring force
+    const int elasticForceFunctionValue = data.inputValue(s_elasticForceFunction).asShort();
     const MVector springVector = (endWorldTranslate - nextPosition);
     const double springVectorLength = springVector.length();
     MVector springForce;
 
-    switch (elasticForceFunctionValue) {
+    switch (elasticForceFunctionValue) // experimental
+    {
         case 0: // Linear
             springForce = (springVector * elasticity) / mass;
             break;
@@ -739,9 +736,10 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     }
     
     // clamp spring force
-    if (springForce.length() > springVectorLength / dt2)
+    const double maxSpringForce = springVectorLength / dt2;
+    if (springForce.length() > maxSpringForce)
     {
-        springForce = springForce.normal() * (springVectorLength / dt2);
+        springForce = springForce.normal() * maxSpringForce;
     }
 
     externalForce += springForce;
@@ -749,16 +747,16 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     // additional force
     externalForce += (additionalForce * additionalForceScale) / mass;
     
-    // turbulent force
+    // turbulence force
     if (enableTurbulence) {
         const double turbulenceStrength = data.inputValue(s_turbulenceStrength).asDouble();
         externalForce += (m_turbulenceVector * turbulenceStrength) / mass;
     }
 
-    // add external force
+    // apply external force
     nextPosition += externalForce * dt2;
     
-    // keep position
+    // apply stiffness
     nextPosition += (m_position - nextPosition) * stiffness;
 
     // angle limit
@@ -935,33 +933,26 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         };
     }
 
-    if (iter == 0)
+    // angle limit
+    if (iter == 0 && enableAngleLimit)
     {
-        // angle limit
-        if (enableAngleLimit)
-        {
-            angleLimit(
-                boneWorldTranslate,
-                endWorldTranslate,
-                nextPosition,
-                degToRad(angleLimitDegrees / 2.0)
-            );
-        };
+        angleLimit(
+            boneWorldTranslate,
+            endWorldTranslate,
+            nextPosition,
+            degToRad(angleLimitDegrees / 2.0)
+        );
     }
 
     // distance constraint
     distanceConstraint(boneWorldTranslate, nextPosition, distance);
     
-    // update velocity
+    // update velocity, position, offset matrix
     m_velocity = (nextPosition - m_position) / dt;
-
-    // update position
     m_position = nextPosition;
-    
-    // update offset matrix
     m_prevOffsetMatrix = offsetMatrix;
 
-    // set output local euler rotation
+    // output local euler rotation
     const MVector initVec = (endWorldTranslate - boneWorldTranslate) * boneParentInverseMatrix * joInverseMatrix * roInverseMatrix;
     const MVector targetVec = (nextPosition - boneWorldTranslate) * boneParentInverseMatrix * joInverseMatrix * roInverseMatrix;
     const MQuaternion quat(initVec, targetVec);
