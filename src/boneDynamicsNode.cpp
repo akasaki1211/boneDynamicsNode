@@ -1,5 +1,7 @@
 #include "boneDynamicsNode.h"
 
+#include <algorithm>
+
 MTypeId boneDynamicsNode::s_id(0x7b001);
 
 MObject boneDynamicsNode::s_enable;
@@ -9,6 +11,7 @@ MObject boneDynamicsNode::s_resetTime;
 MObject boneDynamicsNode::s_fps;
 
 MObject boneDynamicsNode::s_offsetMatrix;
+MObject boneDynamicsNode::s_offsetMatrixWeight;
 
 MObject boneDynamicsNode::s_boneTranslate;
 MObject boneDynamicsNode::s_boneJointOrient;
@@ -24,10 +27,19 @@ MObject boneDynamicsNode::s_endScale;
 
 MObject boneDynamicsNode::s_damping;
 MObject boneDynamicsNode::s_elasticity;
+MObject boneDynamicsNode::s_elasticForceFunction;
 MObject boneDynamicsNode::s_stiffness;
 MObject boneDynamicsNode::s_mass;
 MObject boneDynamicsNode::s_gravityMultiply;
 MObject boneDynamicsNode::s_gravity;
+MObject boneDynamicsNode::s_additionalForce;
+MObject boneDynamicsNode::s_additionalForceScale;
+
+MObject boneDynamicsNode::s_enableTurbulence;
+MObject boneDynamicsNode::s_turbulenceSeed;
+MObject boneDynamicsNode::s_turbulenceStrength;
+MObject boneDynamicsNode::m_turbulenceVectorChangeScale;
+MObject boneDynamicsNode::m_turbulenceVectorChangeMax;
 
 MObject boneDynamicsNode::s_enableAngleLimit;
 MObject boneDynamicsNode::s_angleLimit;
@@ -57,14 +69,14 @@ MObject boneDynamicsNode::s_meshColCutoff;
 
 MObject boneDynamicsNode::s_outputRotate;
 
-boneDynamicsNode::boneDynamicsNode()
-{
-    m_init = true;
+boneDynamicsNode::boneDynamicsNode() : m_init(true), m_lastSeed(-1), m_lastFrame(-1) {
+    m_rngState[0] = 0;
+    m_rngState[1] = 0;
+    m_rngState[2] = 0;
+    m_rngState[3] = 0;
 }
 
-boneDynamicsNode::~boneDynamicsNode()
-{
-}
+boneDynamicsNode::~boneDynamicsNode(){}
 
 void* boneDynamicsNode::creator()
 {
@@ -83,6 +95,7 @@ MStatus boneDynamicsNode::initialize()
     MFnMatrixAttribute mAttr;
     MFnUnitAttribute uAttr;
     MFnTypedAttribute tAttr;
+    MFnEnumAttribute eAttr;
     MObject x, y, z;
 
     s_enable = nAttr.create("enable", "en", MFnNumericData::kBoolean, true);
@@ -103,6 +116,11 @@ MStatus boneDynamicsNode::initialize()
     // input attributes
     s_offsetMatrix = mAttr.create("offsetMatrix", "ofmtx");
     mAttr.setKeyable(true);
+
+    s_offsetMatrixWeight = nAttr.create("offsetMatrixWeight", "ofmtxw", MFnNumericData::kDouble, 1.0);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0);
+    nAttr.setMax(1);
 
     x = nAttr.create("boneTranslateX", "btx", MFnNumericData::kDouble, 0.0);
     y = nAttr.create("boneTranslateY", "bty", MFnNumericData::kDouble, 0.0);
@@ -162,6 +180,12 @@ MStatus boneDynamicsNode::initialize()
     nAttr.setKeyable(true);
     nAttr.setMin(0);
 
+    s_elasticForceFunction = eAttr.create("elasticForceFunction", "eff", 0);
+    eAttr.addField("Linear", 0);
+    eAttr.addField("Quadratic", 1);
+    eAttr.addField("Cubic", 2);
+    eAttr.setKeyable(true);
+
     s_stiffness = nAttr.create("stiffness", "stif", MFnNumericData::kDouble, 0.0);
     nAttr.setKeyable(true);
     nAttr.setMin(0);
@@ -181,6 +205,36 @@ MStatus boneDynamicsNode::initialize()
     nAttr.setKeyable(true);
     nAttr.setMin(0);
     nAttr.setMax(1);
+
+    x = nAttr.create("additionalForceX", "afx", MFnNumericData::kDouble, 0.0);
+    y = nAttr.create("additionalForceY", "afy", MFnNumericData::kDouble, 0.0);
+    z = nAttr.create("additionalForceZ", "afz", MFnNumericData::kDouble, 0.0);
+    s_additionalForce = nAttr.create("additionalForce", "af", x, y, z);
+    nAttr.setKeyable(true);
+
+    s_additionalForceScale = nAttr.create("additionalForceScale", "afs", MFnNumericData::kDouble, 1.0);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0);
+
+    // turbulence
+    s_enableTurbulence = nAttr.create("enableTurbulence", "enw", MFnNumericData::kBoolean, false);
+    nAttr.setKeyable(true);
+
+    s_turbulenceSeed = nAttr.create("turbulenceSeed", "wsd", MFnNumericData::kInt, 0);
+    nAttr.setMin(0);
+    nAttr.setKeyable(true);
+
+    s_turbulenceStrength = nAttr.create("turbulenceStrength", "wst", MFnNumericData::kDouble, 10.0);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0);
+
+    m_turbulenceVectorChangeScale = nAttr.create("turbulenceVectorChangeScale", "wvcs", MFnNumericData::kDouble, 0.05);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0);
+
+    m_turbulenceVectorChangeMax = nAttr.create("turbulenceVectorChangeMax", "wvcm", MFnNumericData::kDouble, 0.1);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0);
 
     // angle limit
     s_enableAngleLimit = nAttr.create("enableAngleLimit", "eal", MFnNumericData::kBoolean, false);
@@ -286,6 +340,7 @@ MStatus boneDynamicsNode::initialize()
     addAttribute(s_fps);
 
     addAttribute(s_offsetMatrix);
+    addAttribute(s_offsetMatrixWeight);
 
     addAttribute(s_boneTranslate);
     addAttribute(s_boneJointOrient);
@@ -301,10 +356,19 @@ MStatus boneDynamicsNode::initialize()
 
     addAttribute(s_damping);
     addAttribute(s_elasticity);
+    addAttribute(s_elasticForceFunction);
     addAttribute(s_stiffness);
     addAttribute(s_mass);
     addAttribute(s_gravity);
     addAttribute(s_gravityMultiply);
+    addAttribute(s_additionalForce);
+    addAttribute(s_additionalForceScale);
+    
+    addAttribute(s_enableTurbulence);
+    addAttribute(s_turbulenceSeed);
+    addAttribute(s_turbulenceStrength);
+    addAttribute(m_turbulenceVectorChangeScale);
+    addAttribute(m_turbulenceVectorChangeMax);
 
     addAttribute(s_enableAngleLimit);
     addAttribute(s_angleLimit);
@@ -339,6 +403,7 @@ MStatus boneDynamicsNode::initialize()
     attributeAffects(s_fps, s_outputRotate);
 
     attributeAffects(s_offsetMatrix, s_outputRotate);
+    attributeAffects(s_offsetMatrixWeight, s_outputRotate);
 
     attributeAffects(s_boneTranslate, s_outputRotate);
     attributeAffects(s_boneJointOrient, s_outputRotate);
@@ -354,10 +419,19 @@ MStatus boneDynamicsNode::initialize()
     
     attributeAffects(s_damping, s_outputRotate);
     attributeAffects(s_elasticity, s_outputRotate);
+    attributeAffects(s_elasticForceFunction, s_outputRotate);
     attributeAffects(s_stiffness, s_outputRotate);
     attributeAffects(s_mass, s_outputRotate);
     attributeAffects(s_gravity, s_outputRotate);
     attributeAffects(s_gravityMultiply, s_outputRotate);
+    attributeAffects(s_additionalForce, s_outputRotate);
+    attributeAffects(s_additionalForceScale, s_outputRotate);
+
+    attributeAffects(s_enableTurbulence, s_outputRotate);
+    attributeAffects(s_turbulenceSeed, s_outputRotate);
+    attributeAffects(s_turbulenceStrength, s_outputRotate);
+    attributeAffects(m_turbulenceVectorChangeScale, s_outputRotate);
+    attributeAffects(m_turbulenceVectorChangeMax, s_outputRotate);
 
     attributeAffects(s_enableAngleLimit, s_outputRotate);
     attributeAffects(s_angleLimit, s_outputRotate);
@@ -380,7 +454,7 @@ MStatus boneDynamicsNode::initialize()
     attributeAffects(s_iPlaneCollider, s_outputRotate);
     attributeAffects(s_meshCollider, s_outputRotate);
     attributeAffects(s_meshColCutoff, s_outputRotate);
-    
+
     return MS::kSuccess;
 }
 
@@ -438,6 +512,34 @@ void boneDynamicsNode::getClosestPoint(const MObject& mesh, const MPoint& point,
     fnMesh.getClosestPointAndNormal(point, closestPoint, closestNormal, MSpace::kWorld);
 }
 
+uint32_t boneDynamicsNode::rotl(const uint32_t x, int k) {
+    return (x << k) | (x >> (32 - k));
+}
+
+double boneDynamicsNode::rand_double(const double scale) {
+
+    // xoshiro128++
+
+    uint32_t* s = m_rngState;
+    uint32_t result = rotl(s[0] + s[3], 7) + s[0];
+    uint32_t t = s[1] << 9;
+
+    s[2] ^= s[0];
+    s[3] ^= s[1];
+    s[1] ^= s[2];
+    s[0] ^= s[3];
+
+    s[2] ^= t;
+
+    s[3] = rotl(s[3], 11);
+
+    // normalize
+    double normalized = result * 2.3283064365386963e-10;
+    
+    // scale
+    return normalized * (scale * 2) - scale;
+}
+
 MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
 {
     const MPlug computePlug = plug.isChild() ? plug.parent() : plug;
@@ -460,9 +562,11 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         return MS::kSuccess;
     }
 
-    // input values
+    // offset matrix
     const MMatrix& offsetMatrix = data.inputValue(s_offsetMatrix).asMatrix();
+    const double offsetMatrixWeight = data.inputValue(s_offsetMatrixWeight).asDouble();
 
+    // bone
     const MVector& boneTranslate = data.inputValue(s_boneTranslate).asVector();
     const MVector& boneJointOrient = data.inputValue(s_boneJointOrient).asVector();
     const MMatrix& boneParentMatrix = data.inputValue(s_boneParentMatrix).asMatrix();
@@ -471,39 +575,32 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     const MVector& boneInverseScaleInput = data.inputValue(s_boneInverseScale).asVector();
     const MVector boneInverseScale(1.0 / boneInverseScaleInput.x, 1.0 / boneInverseScaleInput.y, 1.0 / boneInverseScaleInput.z);
     
+    // end
     const MVector& endTranslate = data.inputValue(s_endTranslate).asVector();
     const MVector& endScale = data.inputValue(s_endScale).asVector();
 
+    // rotation offset
     const MVector& rotationOffset = data.inputValue(s_rotationOffset).asVector();
 
-    // get rotation offset matrix
+    // rotation offset matrix
     const MEulerRotation rotationOffsetEuler(rotationOffset, ROTATION_ORDER);
     const MMatrix roMatrix = rotationOffsetEuler.asMatrix();
-    MMatrix roInverseMatrix;
-    if (!roMatrix.isEquivalent(MMatrix::identity))
-    {
-        roInverseMatrix = roMatrix.inverse();
-    }
+    const MMatrix roInverseMatrix = !roMatrix.isEquivalent(MMatrix::identity) ? roMatrix.inverse() : MMatrix::identity;
 
-    // get joint orient matrix
-    const MEulerRotation boneJointOrientEuler(boneJointOrient, ROTATION_ORDER);
-    const MMatrix joMatrix = boneJointOrientEuler.asMatrix();
-    MMatrix joInverseMatrix;
-    if (!joMatrix.isEquivalent(MMatrix::identity))
-    {
-        joInverseMatrix = joMatrix.inverse();
-    }
+    // joint orient matrix
+    const MMatrix joMatrix = MEulerRotation(boneJointOrient, ROTATION_ORDER).asMatrix();
+    const MMatrix joInverseMatrix = !joMatrix.isEquivalent(MMatrix::identity) ? joMatrix.inverse() : MMatrix::identity;
 
-    // get bone matrix
+    // bone matrix
     MTransformationMatrix boneTransformationMatrix;
     boneTransformationMatrix.setTranslation(boneTranslate, MSpace::kWorld);
     const MMatrix boneMatrix = boneTransformationMatrix.asMatrix();
     
-    // calc bone world position
+    // bone world position
     const MPoint boneWorldTranslatePoint = MPoint(boneTranslate) * boneParentMatrix;
     const MVector boneWorldTranslate(boneWorldTranslatePoint);
 
-    // calc end world position
+    // end world position
     const MPoint scaledEndTranslate(
         endTranslate.x * boneScale.x * boneInverseScale.x, 
         endTranslate.y * boneScale.y * boneInverseScale.y, 
@@ -522,22 +619,38 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     // bone length
     const double distance = (endWorldTranslate - boneWorldTranslate).length();
 
-    // dynamics
+    // dynamic parameters
     const double damping = data.inputValue(s_damping).asDouble();
     const double elasticity = data.inputValue(s_elasticity).asDouble();
     const double stiffness = data.inputValue(s_stiffness).asDouble();
     const double mass = data.inputValue(s_mass).asDouble();
-    const double gravityMultiply = data.inputValue(s_gravityMultiply).asDouble();
     const MVector& gravity = data.inputValue(s_gravity).asVector();
+    const double gravityMultiply = data.inputValue(s_gravityMultiply).asDouble();
+    const MVector& additionalForce = data.inputValue(s_additionalForce).asVector();
+    const double additionalForceScale = data.inputValue(s_additionalForceScale).asDouble();
     
     const MTime& time = data.inputValue(s_time).asTime();
     const MTime& resetTime = data.inputValue(s_resetTime).asTime();
+
+    const bool enableTurbulence = data.inputValue(s_enableTurbulence).asBool();
     
-    // reset(init)
+    // reset and initialization
     if (time <= resetTime || m_init) {
         m_prevOffsetMatrix = offsetMatrix;
         m_position = endWorldTranslate;
         m_velocity = MVector();
+
+        if (enableTurbulence) {
+            m_turbulenceVector = MVector();
+            m_turbulenceVectorChange = MVector();
+            m_lastSeed = -1;
+            m_lastFrame = -1;
+            m_rngState[0] = 0;
+            m_rngState[1] = 0;
+            m_rngState[2] = 0;
+            m_rngState[3] = 0;
+        }
+
         m_init = false;
         
         outputRotateHandle.set3Double(rotationOffsetEuler.x, rotationOffsetEuler.y, rotationOffsetEuler.z);
@@ -551,27 +664,99 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     //double dt = 1.0 / getFPS();
     const double fps = data.inputValue(s_fps).asDouble();
     const double dt = 1.0 / fps;
+    const double dt2 = dt * dt;
 
     // position offset
     const MPoint offsetedPosition = MPoint(m_position) * m_prevOffsetMatrix.inverse() * offsetMatrix;
-    m_position = MVector(offsetedPosition);
+    m_position = MVector(offsetedPosition) * offsetMatrixWeight + m_position * (1.0 - offsetMatrixWeight);
     
     // velocity damping
-    m_velocity = m_velocity * (1.0 - damping);
+    m_velocity *= (1.0 - damping);
     
     // add velocity
     MVector nextPosition = m_position + (m_velocity * dt);
-    
+
+    // turbulence vector
+    if (enableTurbulence) {
+        int frame = static_cast<int>(time.as(MTime::uiUnit()));
+        int turbulenceSeed = data.inputValue(s_turbulenceSeed).asInt();
+
+        if (turbulenceSeed != m_lastSeed || frame != m_lastFrame) {
+
+            // Init xoshiro128++
+            uint32_t s = static_cast<uint32_t>(turbulenceSeed) ^ (static_cast<uint32_t>(frame) * 0x9e3779b9u);
+            for (int i = 0; i < 4; ++i) {
+                s = s * 1664525u + 1013904223u;
+                m_rngState[i] = s;
+            }
+            m_lastSeed = turbulenceSeed;
+            m_lastFrame = frame;
+        }
+        
+        const double turbulenceVectorChangeScale = data.inputValue(m_turbulenceVectorChangeScale).asDouble();
+        const double turbulenceVectorChangeMax = data.inputValue(m_turbulenceVectorChangeMax).asDouble();
+
+        m_turbulenceVectorChange += MVector(
+            rand_double(turbulenceVectorChangeScale), 
+            rand_double(turbulenceVectorChangeScale), 
+            rand_double(turbulenceVectorChangeScale)
+        );
+
+        m_turbulenceVectorChange.x = std::max(-turbulenceVectorChangeMax, std::min(m_turbulenceVectorChange.x, turbulenceVectorChangeMax));
+        m_turbulenceVectorChange.y = std::max(-turbulenceVectorChangeMax, std::min(m_turbulenceVectorChange.y, turbulenceVectorChangeMax));
+        m_turbulenceVectorChange.z = std::max(-turbulenceVectorChangeMax, std::min(m_turbulenceVectorChange.z, turbulenceVectorChangeMax));
+
+        m_turbulenceVector += m_turbulenceVectorChange;
+        m_turbulenceVector.normalize();
+    }
+
     // external force
-    MVector external_force;
-    // spring
-    external_force += ((endWorldTranslate - nextPosition) * elasticity) / mass;
     // gravity
-    external_force += gravity * gravityMultiply;
-    // add external force
-    nextPosition += external_force * dt * dt;
+    MVector externalForce = gravity * gravityMultiply;
+
+    // spring force
+    const int elasticForceFunctionValue = data.inputValue(s_elasticForceFunction).asShort();
+    const MVector springVector = (endWorldTranslate - nextPosition);
+    const double springVectorLength = springVector.length();
+    MVector springForce;
+
+    switch (elasticForceFunctionValue) // experimental
+    {
+        case 0: // Linear
+            springForce = (springVector * elasticity) / mass;
+            break;
+        case 1: // Quadratic
+            springForce = (springVector * ((springVectorLength + 1.0) * elasticity)) / mass;
+            break;
+        case 2: // Cubic
+            springForce = (springVector * ((springVectorLength + 1.0) * (springVectorLength + 1.0) * elasticity)) / mass;
+            break;
+        default:
+            break;
+    }
     
-    // keep position
+    // clamp spring force
+    const double maxSpringForce = springVectorLength / dt2;
+    if (springForce.length() > maxSpringForce)
+    {
+        springForce = springForce.normal() * maxSpringForce;
+    }
+
+    externalForce += springForce;
+    
+    // additional force
+    externalForce += (additionalForce * additionalForceScale) / mass;
+    
+    // turbulence force
+    if (enableTurbulence) {
+        const double turbulenceStrength = data.inputValue(s_turbulenceStrength).asDouble();
+        externalForce += (m_turbulenceVector * turbulenceStrength) / mass;
+    }
+
+    // apply external force
+    nextPosition += externalForce * dt2;
+    
+    // apply stiffness
     nextPosition += (m_position - nextPosition) * stiffness;
 
     // angle limit
@@ -748,33 +933,26 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         };
     }
 
-    if (iter == 0)
+    // angle limit
+    if (iter == 0 && enableAngleLimit)
     {
-        // angle limit
-        if (enableAngleLimit)
-        {
-            angleLimit(
-                boneWorldTranslate,
-                endWorldTranslate,
-                nextPosition,
-                degToRad(angleLimitDegrees / 2.0)
-            );
-        };
+        angleLimit(
+            boneWorldTranslate,
+            endWorldTranslate,
+            nextPosition,
+            degToRad(angleLimitDegrees / 2.0)
+        );
     }
 
     // distance constraint
     distanceConstraint(boneWorldTranslate, nextPosition, distance);
     
-    // update velocity
+    // update velocity, position, offset matrix
     m_velocity = (nextPosition - m_position) / dt;
-
-    // update position
     m_position = nextPosition;
-    
-    // update offset matrix
     m_prevOffsetMatrix = offsetMatrix;
 
-    // set output local euler rotation
+    // output local euler rotation
     const MVector initVec = (endWorldTranslate - boneWorldTranslate) * boneParentInverseMatrix * joInverseMatrix * roInverseMatrix;
     const MVector targetVec = (nextPosition - boneWorldTranslate) * boneParentInverseMatrix * joInverseMatrix * roInverseMatrix;
     const MQuaternion quat(initVec, targetVec);

@@ -1,0 +1,83 @@
+global proc AEboneDynamicsNodeTemplate(string $nodeName)
+{
+    editorTemplate -beginScrollLayout;
+
+        editorTemplate -beginLayout "Bone Dynamics Node Attributes" -collapse false;
+
+            editorTemplate -addControl "enable";
+            editorTemplate -addControl "time";
+            editorTemplate -addControl "resetTime";
+            editorTemplate -label "FPS" -addControl "fps";
+
+            editorTemplate -beginLayout "Input Attributes" -collapse false;
+                editorTemplate -addControl "boneTranslate";
+                editorTemplate -addControl "boneJointOrient";
+                editorTemplate -addControl "boneScale";
+                editorTemplate -addControl "boneInverseScale";
+                editorTemplate -addControl "boneParentMatrix";
+                editorTemplate -addControl "boneParentInverseMatrix";
+
+                editorTemplate -addSeparator;
+
+                editorTemplate -addControl "endTranslate";
+                editorTemplate -addControl "endScale";
+            editorTemplate -endLayout;
+
+            editorTemplate -beginLayout "Control Attributes" -collapse true;
+                editorTemplate -addControl "rotationOffset";
+                editorTemplate -addControl "offsetMatrix";
+                editorTemplate -addControl "offsetMatrixWeight";
+            editorTemplate -endLayout;
+
+            editorTemplate -beginLayout "Dynamics Attributes" -collapse false;
+                editorTemplate -addControl "damping";
+                editorTemplate -addControl "elasticity";
+                editorTemplate -addControl "elasticForceFunction";
+                editorTemplate -addControl "stiffness";
+                editorTemplate -addControl "mass";
+                editorTemplate -addControl "gravity";
+                editorTemplate -addControl "gravityMultiply";
+
+                editorTemplate -addSeparator;
+
+                editorTemplate -addControl "additionalForce";
+                editorTemplate -addControl "additionalForceScale";
+                
+                editorTemplate -addSeparator;
+
+                editorTemplate -addControl "enableTurbulence";
+                editorTemplate -addControl "turbulenceSeed";
+                editorTemplate -addControl "turbulenceStrength";
+                editorTemplate -addControl "turbulenceVectorChangeScale";
+                editorTemplate -addControl "turbulenceVectorChangeMax";
+            editorTemplate -endLayout;
+
+            editorTemplate -beginLayout "Limits" -collapse true;
+                editorTemplate -addControl "enableAngleLimit";
+                editorTemplate -addControl "angleLimit";
+            editorTemplate -endLayout;
+
+            editorTemplate -beginLayout "Collisions" -collapse true;
+                editorTemplate -addControl "radius";
+                editorTemplate -addControl "iterations";
+                editorTemplate -addControl "enableGroundCol";
+                editorTemplate -addControl "groundHeight";
+                editorTemplate -addControl "sphereCollider";
+                editorTemplate -addControl "capsuleCollider";
+                editorTemplate -addControl "infinitePlaneCollider";
+                editorTemplate -label "Mesh Collider (*Experimental)" -addControl "meshCollider";
+                editorTemplate -addControl "meshColCutoff";
+            editorTemplate -endLayout;
+
+            //suppressed attributes
+            editorTemplate -suppress "outputRotate";
+            
+            // include/call base class/node attributes
+            AEdependNodeTemplate $nodeName;
+
+            editorTemplate -addExtraControls;
+
+        editorTemplate -endLayout;
+
+    editorTemplate -endScrollLayout;
+}
