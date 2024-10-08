@@ -9,6 +9,11 @@ A custom node that applies dynamics to one section of a joint chain. It can be i
 1. Put [boneDynamicsNode.mll](#Pre-built-plug-ins) in `C:\Users\<USERNAME>\Documents\maya\<MAYAVERSION>\plug-ins`.  
 2. Load "boneDynamicsNode.mll" from Plug-in Manager.  
 
+> **Note**  
+> If [AEboneDynamicsNodeTemplate.mel](scripts/AEboneDynamicsNodeTemplate.mel) is placed in `C:\Users\<USERNAME>\Documents\maya\<MAYAVERSION>\scripts`, the layout of the Attribute Editor will change.  
+> 
+> ![aetemplate](.images/aetemplate.png)
+
 ## Basic Usage
 Create any joint chain and connect the `boneDynamicsNode` per section. The minimum required connections are as follows:
 
@@ -44,10 +49,21 @@ Let's move the current frame to 1 or later and move the root. The joint-chain sh
 ### Dynamics Attributes
 - `Damping` : Attenuates speed. The larger the value, the harder it is to accelerate.  
 - `Elasticity` : Force to return to the original posture.  
+- `Elastic Force Function` __(*Experimental)__ : The type of elastic force.  
+  - `Linear`: Normal.  
+  - `Quadratic`: The elastic force increases when it is moved away from the original posture.  
+  - `Cubic`: The elastic force increases **even more** when it is moved away from the original posture.
 - `Stiffness` : Suppresses changes between frames (steps). Setting to 1 will result in loss of motion.  
 - `Mass` : Affects the force to return to the original posture.  
 - `Gravity` : If Y-up and the unit is in centimeters, set [0,-980,0].  
 - `Gravity Multiply` : Will be multiplied by Gravity.  
+- `Additional Force` : Any additional force.  
+- `Additional Force Scale` : Scale value of additional force.  
+- `Enable Turbulence`: Enable turbulence force.  
+- `Turbulence Seed`: Seed value for randomly changing the vector direction.  
+- `Turbulence Strength`: Scale value of turbulence force.  
+- `Turbulence Vector Change Scale`: Change in turbulence force vector.  
+- `Turbulence Vector Change Max`: Maximum change in turbulence force vector.  
 
 ### Bake to Keyframes
 Select the joint and execute "Bake Simulation" from the "Key" menu. Then delete the boneDynamicsNode.  
@@ -170,12 +186,26 @@ Branching is possible, but good results are obtained with joints like the one on
 
 ![branching_skeleton](.images/branching_skeleton.png)
 
+### Additional Force / Turbulence Force
+
+The vector entered in `Additional Force` is multiplied by the `Additional Force Scale` and added to the external force. Unlike `Gravity`, it takes mass into account.  
+
+Enabling `Enable Turbulence` adds a vector that changes direction randomly to the external force. The change accumulates starting from the `Reset Time`. Nodes with the same `Turbulence Seed` and `Reset Time` will generate the same turbulence vector.  
+
+**Turbulence wind** can be represented by a combination of these features.  
+
+![turbulence_wind](.images/turbulence_wind.gif)
+![turbulence_wind_settings](.images/turbulence_wind_settings.png)
+
+---
+
 > 💡**Sample Script**  
 > [advanced_usage.py](sample_scripts/advanced_usage.py) is a script to connect bonedynamicsNode to any joint chain. Please select and execute them in order from the root of the joint to the tip of the joint.  
 > - Enable per-section scaling.  
 > - If place the collider created by expcol as a child of 'collider_grp', to be connected.  
 > - If duplicate the joint-chain to be simulated and add '_target' to the end of the name, to allow manipulation of the target posture.  
 > - If a node named "offset" exists, will be connected to cancel the transform.  
+> - If a node named "wind" exists, it will be connected to the Additional Force.
 
 ## Pre-built plug-ins
 Pre-built `boneDynamicsNode.mll` in the [plug-ins](./plug-ins) folder. Install to the appropriate Maya version and ready to use.  
@@ -184,7 +214,7 @@ Pre-built `boneDynamicsNode.mll` in the [plug-ins](./plug-ins) folder. Install t
 |Maya 2022 Update 5 win64|[Download](./plug-ins/2022/boneDynamicsNode.mll)|
 |Maya 2023 Update 3 win64|[Download](./plug-ins/2023/boneDynamicsNode.mll)|
 |Maya 2024 Update 2 win64|[Download](./plug-ins/2024/boneDynamicsNode.mll)|
-|Maya 2025 Update 1 win64|[Download](./plug-ins/2025/boneDynamicsNode.mll)|
+|Maya 2025 Update 2 win64|[Download](./plug-ins/2025/boneDynamicsNode.mll)|
 
 ## How to Build  
 For example, Maya 2024 in Windows:  
