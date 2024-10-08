@@ -9,7 +9,9 @@ def create_dynamics_node(
         target_bone=None, 
         offset_node=None, 
         colliders=[],
-        visualize=True
+        visualize=True,
+        additional_force_node=None, 
+        additional_force_init_vec=[0,0,-1]
     ):
 
     if not bone in cmds.listRelatives(end, p=True):
@@ -40,6 +42,19 @@ def create_dynamics_node(
         if cmds.objExists(offset_node):
             cmds.connectAttr(offset_node + '.worldMatrix[0]', boneDynamicsNode + '.offsetMatrix', f=True)
 
+    if additional_force_node:
+        if cmds.objExists(additional_force_node):
+            vp = cmds.listConnections(additional_force_node + '.worldMatrix[0]', s=False, d=True, type='vectorProduct')
+            if vp:
+                vp = vp[0]
+            else:
+                vp = cmds.createNode('vectorProduct')
+                cmds.setAttr(vp + '.operation', 3)
+                cmds.setAttr(vp + '.input1', additional_force_init_vec[0], additional_force_init_vec[1], additional_force_init_vec[2], type='double3')
+                cmds.setAttr(vp + '.normalizeOutput', 1)
+                cmds.connectAttr(additional_force_node + '.worldMatrix[0]', vp + '.matrix', f=True)
+            cmds.connectAttr(vp + '.output', boneDynamicsNode + '.additionalForce', f=True)
+                
     if visualize:
         # angle limit
         angle_cone = cmds.createNode("implicitCone")
@@ -133,6 +148,9 @@ if __name__ == "__main__":
     
     # Name of the node to offset the transform.
     offset_node_name = "offset"
+
+    # Node name that controls the direction of additional force
+    additional_force_node_name = "wind"
     
     # ---------------------------------------------------
 
@@ -149,7 +167,9 @@ if __name__ == "__main__":
             target_bone=bone+target_bone_postfix, 
             offset_node=offset_node_name, 
             colliders=colliders,
-            visualize=True
+            visualize=True,
+            additional_force_node=additional_force_node_name,
+            additional_force_init_vec=[0, 0, -1]
         )
 
         if boneDynamicsNode:
