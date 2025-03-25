@@ -35,16 +35,16 @@ Let's move the current frame to 1 or later and move the root. The joint-chain sh
 
 ![basic_usage](.images/basic_usage.gif)
 
-> 💡**Required Settings**  
-> Please check the following settings to ensure correct results:  
-> - **Disable** "Cached Playback".
-> - Set "Playback speed" to **"Play every frame"**.
-
 > 💡**Requirements for Joint**  
 > Joint chain must meet the requirements [here](#Requirements-for-Joint).
 
 > 💡**Sample Script**  
 > [basic_usage.py](sample_scripts/basic_usage.py) is a script to connect bonedynamicsNode to any joint chain. Please select and execute them in order from the root of the joint to the tip of the joint.  
+
+### Required Settings  
+Please check the following settings to ensure correct results:  
+- **Disable** "Cached Playback".
+- Set "Playback speed" to **`Play every frame`**.
 
 ### Attributes to Check
 - `Enable` : Turning it off disables all calculations.  
