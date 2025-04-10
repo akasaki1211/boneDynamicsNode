@@ -1,5 +1,8 @@
 #pragma once
 
+// Disabled min/max macros in Windows API
+#define NOMINMAX  
+
 #include <maya/MPxNode.h>
 #include <maya/MTypeId.h>
 #include <maya/MFnNumericAttribute.h>

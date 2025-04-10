@@ -219,7 +219,8 @@ Pre-built `boneDynamicsNode.mll` in the [plug-ins](./plug-ins) folder. Install t
 |Maya 2022 Update 5 win64|[Download](./plug-ins/2022/boneDynamicsNode.mll)|
 |Maya 2023 Update 3 win64|[Download](./plug-ins/2023/boneDynamicsNode.mll)|
 |Maya 2024 Update 2 win64|[Download](./plug-ins/2024/boneDynamicsNode.mll)|
-|Maya 2025 Update 2 win64|[Download](./plug-ins/2025/boneDynamicsNode.mll)|
+|Maya 2025 Update 3 win64|[Download](./plug-ins/2025/boneDynamicsNode.mll)|
+|Maya 2026 win64|[Download](./plug-ins/2026/boneDynamicsNode.mll)|
 
 ## How to Build  
 For example, Maya 2024 in Windows:  
