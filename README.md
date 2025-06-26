@@ -18,11 +18,11 @@
 
 ## 🔧 Quick Installation
 
-1. Download the appropriate `boneDynamicsNode.mll` for the Maya version from the [Releases page](https://github.com/akasaki1211/boneDynamicsNode/releases) or from [Pre-built plug-ins](#pre-built-plug-ins).
+1. Download the appropriate `boneDynamicsNode.mll` for the Maya version from the [Releases page](https://github.com/akasaki1211/boneDynamicsNode/releases) or from [Pre-built plug-ins](#-pre-built-plug-ins).
 2. Copy it to `C:\Users\<USERNAME>\Documents\maya\<MAYAVERSION>\plug-ins`.
 3. Load `boneDynamicsNode.mll` using Maya's Plug-in Manager.
 
-For additional instructions, refer to the [Installation](./wiki/Installation.md) wiki page.
+For additional instructions, refer to the [Installation](https://github.com/akasaki1211/boneDynamicsNode/wiki/Installation) wiki page.
 
 ## 🚀 Try it out
 
@@ -52,21 +52,21 @@ cmds.select(bon)
 
 > Disable "Cached Playback" and set "Playback speed" to **Play every frame**.
 
-Refer to [Quick Start](./wiki/Quick-Start.md) and [Basic Usage](./wiki/Basic-Usage.md) for details.
+Refer to [Quick Start](https://github.com/akasaki1211/boneDynamicsNode/wiki/Quick-Start) and [Basic Usage](https://github.com/akasaki1211/boneDynamicsNode/wiki/Basic-Usage) for details.
 
 ## 📖 Documentation
 
-Full documentation is available in the [wiki](./wiki/Home.md):
+Full documentation is available in the [wiki](https://github.com/akasaki1211/boneDynamicsNode/wiki/Home):
 
-- [Installation](./wiki/Installation.md)
-- [Quick Start](./wiki/Quick-Start.md)
-- [Basic Usage](./wiki/Basic-Usage.md)
-- [Dynamics Parameters](./wiki/Dynamics-Parameters.md)
-- [Collision Guide](./wiki/Collision-Guide.md)
-- [Advanced Features](./wiki/Advanced-Features.md)
-- [Practical Examples](./wiki/Practical-Examples.md)
-- [FAQ & Troubleshooting](./wiki/FAQ-&-Troubleshooting.md)
-- [Change Log](./wiki/Change-Log.md)
+- [Installation](https://github.com/akasaki1211/boneDynamicsNode/wiki/Installation)
+- [Quick Start](https://github.com/akasaki1211/boneDynamicsNode/wiki/Quick-Start)
+- [Basic Usage](https://github.com/akasaki1211/boneDynamicsNode/wiki/Basic-Usage)
+- [Dynamics Parameters](https://github.com/akasaki1211/boneDynamicsNode/wiki/Dynamics-Parameters)
+- [Collision Guide](https://github.com/akasaki1211/boneDynamicsNode/wiki/Collision-Guide)
+- [Advanced Features](https://github.com/akasaki1211/boneDynamicsNode/wiki/Advanced-Features)
+- [Practical Examples](https://github.com/akasaki1211/boneDynamicsNode/wiki/Practical-Examples)
+- [FAQ & Troubleshooting](https://github.com/akasaki1211/boneDynamicsNode/wiki/FAQ-&-Troubleshooting)
+- [Change Log](https://github.com/akasaki1211/boneDynamicsNode/wiki/Change-Log)
 
 ## 📦 Pre-built plug-ins
 
