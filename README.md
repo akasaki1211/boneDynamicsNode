@@ -14,6 +14,7 @@
 - Specify target pose
 - Cancel transforms of specific nodes
 - Per-section scaling capability
+- Turbulent wind
 - Support for branching structures
 
 ## 🔧 Quick Installation
