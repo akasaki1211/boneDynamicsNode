@@ -1,6 +1,7 @@
 #include "boneDynamicsNode.h"
 
 #include <algorithm>
+#include <cassert>
 
 MTypeId boneDynamicsNode::s_id(0x7b001);
 
@@ -86,6 +87,13 @@ void* boneDynamicsNode::creator()
 boneDynamicsNode::SchedulingType boneDynamicsNode::schedulingType() const
 {
     return kParallel;
+}
+
+void boneDynamicsNode::getCacheSetup(const MEvaluationNode& evalNode, MNodeCacheDisablingInfo& disablingInfo, MNodeCacheSetupInfo& cacheSetupInfo, MObjectArray& monitoredAttributes) const
+{
+    // disable cached playback
+    disablingInfo.setCacheDisabled(true);
+    disablingInfo.setReason("boneDynamicsNode does not support cached playback.");
 }
 
 MStatus boneDynamicsNode::initialize()
