@@ -28,8 +28,10 @@ public:
     
     static void* creator();
     virtual SchedulingType schedulingType() const;
-    void getCacheSetup(const MEvaluationNode& evalNode, MNodeCacheDisablingInfo& disablingInfo, MNodeCacheSetupInfo& cacheSetupInfo, MObjectArray& monitoredAttributes) const override;
 
+    void getCacheSetup(const MEvaluationNode& evalNode, MNodeCacheDisablingInfo& disablingInfo, MNodeCacheSetupInfo& cacheSetupInfo, MObjectArray& monitoredAttributes) const override;
+    MTimeRange transformInvalidationRange(const MPlug& source, const MTimeRange& input) const override;
+    
     static MStatus initialize();
     MStatus compute(const MPlug& plug, MDataBlock& data) override;
 

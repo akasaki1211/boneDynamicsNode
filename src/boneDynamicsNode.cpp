@@ -89,11 +89,50 @@ boneDynamicsNode::SchedulingType boneDynamicsNode::schedulingType() const
     return kParallel;
 }
 
+/* -------------------------------
+Simulation Support
+    references: 
+    https://damassets.autodesk.net/content/dam/autodesk/www/html/maya-cached-playback/2026/MayaCachedPlaybackWhitePaper.html#dynamics-and-layered-caching
+    https://damassets.autodesk.net/content/dam/autodesk/www/html/maya-cached-playback/2026/MayaCachedPlaybackWhitePaper.html#plug-in-authoring
+------------------------------- */
 void boneDynamicsNode::getCacheSetup(const MEvaluationNode& evalNode, MNodeCacheDisablingInfo& disablingInfo, MNodeCacheSetupInfo& cacheSetupInfo, MObjectArray& monitoredAttributes) const
 {
-    // disable cached playback
-    disablingInfo.setCacheDisabled(true);
-    disablingInfo.setReason("boneDynamicsNode does not support cached playback.");
+    MPxNode::getCacheSetup(evalNode, disablingInfo, cacheSetupInfo, monitoredAttributes);
+    assert(!disablingInfo.getCacheDisabled());
+    cacheSetupInfo.setRequirement(MNodeCacheSetupInfo::kSimulationSupport, true);
+}
+
+MTimeRange boneDynamicsNode::transformInvalidationRange(
+    const MPlug& source,
+    const MTimeRange& input
+) const
+{
+    static constexpr MTime::MTick kMaximumTimeTick = std::numeric_limits<MTime::MTick>::max() / 2;
+    static constexpr MTime::MTick kMinimumTimeTick = std::numeric_limits<MTime::MTick>::min() / 2 + 1;
+    static const MTime kMaximumTime{ kMaximumTimeTick / static_cast<double>(MTime::ticksPerSecond()), MTime::kSeconds };
+    static const MTime kMinimumTime{ kMinimumTimeTick / static_cast<double>(MTime::ticksPerSecond()), MTime::kSeconds };
+
+    MDataBlock data = const_cast<boneDynamicsNode*>(this)->forceCache();
+    if (!data.isClean(s_resetTime) || !data.isClean(s_enable))
+    {
+        return MTimeRange{ kMinimumTime, kMaximumTime };
+    }
+
+    const bool enable = data.inputValue(s_enable).asBool();
+    if (!enable)
+    {
+        return input;
+    }
+    
+    const MTime& resetTime = data.inputValue(s_resetTime).asTime();
+    if (input.intersects(resetTime, kMaximumTime))
+    {
+        return input | MTimeRange{ resetTime, kMaximumTime };
+    }
+    else
+    {
+        return MTimeRange{};
+    }
 }
 
 MStatus boneDynamicsNode::initialize()
