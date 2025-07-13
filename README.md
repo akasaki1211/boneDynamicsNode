@@ -51,7 +51,7 @@ cmds.currentTime(1)
 cmds.select(bon)
 ```
 
-> Disable "Cached Playback" and set "Playback speed" to **Play every frame**.
+> Please set "Playback speed" to **Play every frame**.
 
 Refer to [Quick Start](https://github.com/akasaki1211/boneDynamicsNode/wiki/Quick-Start) and [Basic Usage](https://github.com/akasaki1211/boneDynamicsNode/wiki/Basic-Usage) for details.
 
