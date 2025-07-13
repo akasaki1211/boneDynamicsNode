@@ -7,7 +7,7 @@
 MStatus initializePlugin(MObject obj)
 {
     MStatus status;
-    MFnPlugin plugin(obj, "Hiroyuki Akasaki", "0.4.1", "Any");
+    MFnPlugin plugin(obj, "Hiroyuki Akasaki", "0.4.2", "Any");
 
     status = plugin.registerNode(boneDynamicsNodeName, boneDynamicsNode::s_id, boneDynamicsNode::creator, boneDynamicsNode::initialize);
     if (!status) {
