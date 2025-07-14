@@ -91,10 +91,23 @@ boneDynamicsNode::SchedulingType boneDynamicsNode::schedulingType() const
 
 void boneDynamicsNode::getCacheSetup(const MEvaluationNode& evalNode, MNodeCacheDisablingInfo& disablingInfo, MNodeCacheSetupInfo& cacheSetupInfo, MObjectArray& monitoredAttributes) const
 {
+    bool enabled = false;
+    MStatus status;
+    MObject nodeObj = thisMObject();
+    MPlug enablePlug(nodeObj, s_enable);
+    if (!enablePlug.isNull()) {
+        status = enablePlug.getValue(enabled);
+    }
+
     // disable cached playback
-    disablingInfo.setCacheDisabled(true);
-    disablingInfo.setReason("boneDynamicsNode does not support cached playback.");
+    if (enabled) {
+        disablingInfo.setCacheDisabled(true);
+        disablingInfo.setReason("boneDynamicsNode does not support cached playback.");
+    }
+
+    monitoredAttributes.append(s_enable);
 }
+
 
 MStatus boneDynamicsNode::initialize()
 {
