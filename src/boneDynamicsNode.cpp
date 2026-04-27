@@ -1,9 +1,10 @@
 #include "boneDynamicsNode.h"
+#include "nodeIds.h"
+#include "mathUtils.h"
 
-#include <algorithm>
-#include <cassert>
+#include <algorithm> // used for std::max and std::min
 
-MTypeId boneDynamicsNode::s_id(0x7b001);
+MTypeId boneDynamicsNode::s_id(nodeIds::boneDynamicsNode);
 
 MObject boneDynamicsNode::s_enable;
 
@@ -495,11 +496,6 @@ MStatus boneDynamicsNode::initialize()
     return fps;
 }*/
 
-double boneDynamicsNode::degToRad(double deg)
-{
-    return deg * (M_PI / 180);
-}
-
 void boneDynamicsNode::angleLimit(const MVector& pivot, const MVector& a, MVector& b, const double limitAngle)
 {
     const MVector initVec = a - pivot;
@@ -531,34 +527,6 @@ void boneDynamicsNode::getClosestPoint(const MObject& mesh, const MPoint& point,
 {
     MFnMesh fnMesh(mesh);
     fnMesh.getClosestPointAndNormal(point, closestPoint, closestNormal, MSpace::kWorld);
-}
-
-uint32_t boneDynamicsNode::rotl(const uint32_t x, int k) {
-    return (x << k) | (x >> (32 - k));
-}
-
-double boneDynamicsNode::rand_double(const double scale) {
-
-    // xoshiro128++
-
-    uint32_t* s = m_rngState;
-    uint32_t result = rotl(s[0] + s[3], 7) + s[0];
-    uint32_t t = s[1] << 9;
-
-    s[2] ^= s[0];
-    s[3] ^= s[1];
-    s[1] ^= s[2];
-    s[0] ^= s[3];
-
-    s[2] ^= t;
-
-    s[3] = rotl(s[3], 11);
-
-    // normalize
-    double normalized = result * 2.3283064365386963e-10;
-    
-    // scale
-    return normalized * (scale * 2) - scale;
 }
 
 MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
@@ -705,7 +673,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         if (turbulenceSeed != m_lastSeed || frame != m_lastFrame) {
 
             // Init xoshiro128++
-            uint32_t s = static_cast<uint32_t>(turbulenceSeed) ^ (static_cast<uint32_t>(frame) * 0x9e3779b9u);
+            std::uint32_t s = static_cast<std::uint32_t>(turbulenceSeed) ^ (static_cast<std::uint32_t>(frame) * 0x9e3779b9u);
             for (int i = 0; i < 4; ++i) {
                 s = s * 1664525u + 1013904223u;
                 m_rngState[i] = s;
@@ -718,9 +686,9 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         const double turbulenceVectorChangeMax = data.inputValue(m_turbulenceVectorChangeMax).asDouble();
 
         m_turbulenceVectorChange += MVector(
-            rand_double(turbulenceVectorChangeScale), 
-            rand_double(turbulenceVectorChangeScale), 
-            rand_double(turbulenceVectorChangeScale)
+            mathUtils::randomDouble(m_rngState, turbulenceVectorChangeScale),
+            mathUtils::randomDouble(m_rngState, turbulenceVectorChangeScale),
+            mathUtils::randomDouble(m_rngState, turbulenceVectorChangeScale)
         );
 
         m_turbulenceVectorChange.x = std::max(-turbulenceVectorChangeMax, std::min(m_turbulenceVectorChange.x, turbulenceVectorChangeMax));
@@ -949,7 +917,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
                 boneWorldTranslate, 
                 endWorldTranslate, 
                 nextPosition, 
-                degToRad(angleLimitDegrees / 2.0)
+                mathUtils::degToRad(angleLimitDegrees / 2.0)
             );
         };
     }
@@ -961,7 +929,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
             boneWorldTranslate,
             endWorldTranslate,
             nextPosition,
-            degToRad(angleLimitDegrees / 2.0)
+            mathUtils::degToRad(angleLimitDegrees / 2.0)
         );
     }
 

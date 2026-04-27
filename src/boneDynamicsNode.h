@@ -112,14 +112,10 @@ public:
 
 private:
     //static double getFPS();
-    double degToRad(double deg);
     void angleLimit(const MVector& pivot, const MVector& a, MVector& b, const double limitAngle);
     void distanceConstraint(const MVector& pivot, MVector& point, double distance);
     void getClosestPoint(const MObject& mesh, const MPoint& position, MPoint& closestPoint, MVector& closestNormal);
     
-    inline uint32_t rotl(const uint32_t x, int k);
-    double rand_double(const double scale);
-
     static const MEulerRotation::RotationOrder ROTATION_ORDER = MEulerRotation::RotationOrder::kXYZ;
     
     bool m_init;
@@ -129,7 +125,7 @@ private:
 
     int m_lastSeed;
     int m_lastFrame;
-    uint32_t m_rngState[4];
+    std::uint32_t m_rngState[4];
     MVector m_turbulenceVector;       // turbulence vector
     MVector m_turbulenceVectorChange; // vector that changes the turbulenceVector
 };
