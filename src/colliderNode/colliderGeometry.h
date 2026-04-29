@@ -22,9 +22,9 @@ namespace colliderGeometry
         unsigned int depthPriority;
     };
 
-    float getDistancePlugAsCentimeters(const MObject& node, const MObject& attribute, float defaultValue);
+    double getDistancePlugAsCentimeters(const MObject& node, const MObject& attribute, double defaultValue);
 
-    MBoundingBox makeSphereBoundingBox(float radius);
+    MBoundingBox makeSphereBoundingBox(double radius);
 
-    void appendWireSphere(MPointArray& lineList, float radius, int segments = kDefaultSegments);
+    void appendWireSphere(MPointArray& lineList, double radius, int segments = kDefaultSegments);
 }

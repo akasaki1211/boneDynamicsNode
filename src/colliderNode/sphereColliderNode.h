@@ -64,5 +64,5 @@ public:
 
 private:
     explicit sphereColliderDrawOverride(const MObject& obj);
-    float getRadius(const MDagPath& objPath) const;
+    double getRadius(const MDagPath& objPath) const;
 };

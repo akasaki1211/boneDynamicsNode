@@ -29,7 +29,7 @@ bool sphereColliderNode::isBounded() const
 MBoundingBox sphereColliderNode::boundingBox() const
 {
     const MObject thisNode = thisMObject();
-    const float radius = colliderGeometry::getDistancePlugAsCentimeters(thisNode, s_radius, 1.0f);
+    const double radius = colliderGeometry::getDistancePlugAsCentimeters(thisNode, s_radius, 1.0);
     return colliderGeometry::makeSphereBoundingBox(radius);
 }
 
@@ -71,21 +71,21 @@ bool sphereColliderDrawOverride::isBounded(const MDagPath& objPath, const MDagPa
 
 MBoundingBox sphereColliderDrawOverride::boundingBox(const MDagPath& objPath, const MDagPath& cameraPath) const
 {
-    const float radius = getRadius(objPath);
+    const double radius = getRadius(objPath);
     return colliderGeometry::makeSphereBoundingBox(radius);
 }
 
-float sphereColliderDrawOverride::getRadius(const MDagPath& objPath) const
+double sphereColliderDrawOverride::getRadius(const MDagPath& objPath) const
 {
     MStatus status;
     const MObject node = objPath.node(&status);
 
     if (!status)
     {
-        return 1.0f;
+        return 1.0;
     }
 
-    const float radius = colliderGeometry::getDistancePlugAsCentimeters(node, sphereColliderNode::s_radius, 1.0f);
+    const double radius = colliderGeometry::getDistancePlugAsCentimeters(node, sphereColliderNode::s_radius, 1.0);
 
     return radius;
 }
@@ -103,7 +103,7 @@ MUserData* sphereColliderDrawOverride::prepareForDraw(
         drawData = new colliderGeometry::ColliderDrawData();
     }
 
-    const float radius = getRadius(objPath);
+    const double radius = getRadius(objPath);
 
     drawData->lineList.clear();
 
