@@ -4,7 +4,6 @@
 #include <maya/MColor.h>
 #include <maya/MObject.h>
 #include <maya/MBoundingBox.h>
-#include <maya/MVector.h>
 #include <maya/MUserData.h>
 
 namespace colliderGeometry
@@ -25,6 +24,8 @@ namespace colliderGeometry
     double getDistancePlugAsCentimeters(const MObject& node, const MObject& attribute, double defaultValue);
 
     MBoundingBox makeSphereBoundingBox(double radius);
+    MBoundingBox makeCapsuleBoundingBox(double radiusA, double radiusB, double height);
 
     void appendWireSphere(MPointArray& lineList, double radius, int segments = kDefaultSegments);
+    void appendWireCapsule(MPointArray& lineList, double radiusA, double radiusB, double height, int segments = kDefaultSegments);
 }

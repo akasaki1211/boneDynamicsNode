@@ -14,6 +14,8 @@ set(SOURCE_FILES
    colliderNode/colliderGeometry.cpp
    colliderNode/sphereColliderNode.h
    colliderNode/sphereColliderNode.cpp
+   colliderNode/capsuleColliderNode.h
+   colliderNode/capsuleColliderNode.cpp
    pluginMain.cpp
 ) 
 
