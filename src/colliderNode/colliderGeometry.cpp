@@ -64,16 +64,17 @@ namespace colliderGeometry
         segments = std::max(4, segments);
 
         const double pi = mathUtils::kPi;
+        const double doubleSegments = static_cast<double>(segments);
 
         for (int i = 0; i < segments; ++i)
         {
-            const double theta1 = pi * static_cast<double>(i) / static_cast<double>(segments);
-            const double theta2 = pi * static_cast<double>(i + 1) / static_cast<double>(segments);
+            const double theta1 = pi * static_cast<double>(i) / doubleSegments;
+            const double theta2 = pi * static_cast<double>(i + 1) / doubleSegments;
 
             for (int j = 0; j < segments; ++j)
             {
-                const double phi1 = 2.0 * pi * static_cast<double>(j) / static_cast<double>(segments);
-                const double phi2 = 2.0 * pi * static_cast<double>(j + 1) / static_cast<double>(segments);
+                const double phi1 = 2.0 * pi * static_cast<double>(j) / doubleSegments;
+                const double phi2 = 2.0 * pi * static_cast<double>(j + 1) / doubleSegments;
 
                 const double x1 = radius * std::sin(theta1) * std::cos(phi1);
                 const double y1 = radius * std::cos(theta1);
@@ -105,11 +106,12 @@ namespace colliderGeometry
 
         const double pi = mathUtils::kPi;
         const double halfHeight = height * 0.5;
+        const double doubleSegments = static_cast<double>(segments);
 
         // body lines
         for (int i = 0; i < segments; ++i)
         {
-            const double phi = 2.0 * pi * static_cast<double>(i) / static_cast<double>(segments);
+            const double phi = 2.0 * pi * static_cast<double>(i) / doubleSegments;
 
             const double x1 = radiusA * std::cos(phi);
             const double z1 = radiusA * std::sin(phi);
@@ -124,13 +126,13 @@ namespace colliderGeometry
         // upper hemisphere
         for (int i = 0; i < segments / 2; ++i)
         {
-            const double theta1 = pi * static_cast<double>(i) / static_cast<double>(segments);
-            const double theta2 = pi * static_cast<double>(i + 1) / static_cast<double>(segments);
+            const double theta1 = pi * static_cast<double>(i) / doubleSegments;
+            const double theta2 = pi * static_cast<double>(i + 1) / doubleSegments;
 
             for (int j = 0; j < segments; ++j)
             {
-                const double phi1 = 2.0 * pi * static_cast<double>(j) / static_cast<double>(segments);
-                const double phi2 = 2.0 * pi * static_cast<double>(j + 1) / static_cast<double>(segments);
+                const double phi1 = 2.0 * pi * static_cast<double>(j) / doubleSegments;
+                const double phi2 = 2.0 * pi * static_cast<double>(j + 1) / doubleSegments;
 
                 const double x1 = radiusA * std::cos(theta1) * std::cos(phi1);
                 const double y1 = radiusA * std::sin(theta1);
@@ -155,13 +157,13 @@ namespace colliderGeometry
         // lower hemisphere
         for (int i = 0; i < segments / 2; ++i)
         {
-            const double theta1 = pi * static_cast<double>(i) / static_cast<double>(segments);
-            const double theta2 = pi * static_cast<double>(i + 1) / static_cast<double>(segments);
+            const double theta1 = pi * static_cast<double>(i) / doubleSegments;
+            const double theta2 = pi * static_cast<double>(i + 1) / doubleSegments;
 
             for (int j = 0; j < segments; ++j)
             {
-                const double phi1 = 2.0 * pi * static_cast<double>(j) / static_cast<double>(segments);
-                const double phi2 = 2.0 * pi * static_cast<double>(j + 1) / static_cast<double>(segments);
+                const double phi1 = 2.0 * pi * static_cast<double>(j) / doubleSegments;
+                const double phi2 = 2.0 * pi * static_cast<double>(j + 1) / doubleSegments;
 
                 const double x1 = radiusB * std::cos(theta1) * std::cos(phi1);
                 const double y1 = -radiusB * std::sin(theta1);
