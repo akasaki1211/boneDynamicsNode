@@ -5,18 +5,8 @@
 
 #include <maya/MPxNode.h>
 #include <maya/MTypeId.h>
-#include <maya/MFnNumericAttribute.h>
-#include <maya/MFnCompoundAttribute.h>
-#include <maya/MFnMatrixAttribute.h>
-#include <maya/MFnUnitAttribute.h>
-#include <maya/MFnTypedAttribute.h>
-#include <maya/MFnEnumAttribute.h>
-#include <maya/MFnMesh.h>
-#include <maya/MTime.h>
-#include <maya/MVector.h>
-#include <maya/MPoint.h>
 #include <maya/MMatrix.h>
-#include <maya/MTransformationMatrix.h>
+#include <maya/MVector.h>
 #include <maya/MQuaternion.h>
 #include <maya/MEulerRotation.h>
 

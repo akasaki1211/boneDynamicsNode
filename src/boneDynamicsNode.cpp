@@ -2,7 +2,18 @@
 #include "nodeIds.h"
 #include "mathUtils.h"
 
-#include <algorithm> // used for std::max and std::min
+#include <maya/MFnNumericAttribute.h>
+#include <maya/MFnCompoundAttribute.h>
+#include <maya/MFnMatrixAttribute.h>
+#include <maya/MFnUnitAttribute.h>
+#include <maya/MFnTypedAttribute.h>
+#include <maya/MFnEnumAttribute.h>
+#include <maya/MFnMesh.h>
+#include <maya/MTime.h>
+#include <maya/MPoint.h>
+#include <maya/MTransformationMatrix.h>
+
+#include <algorithm> // std::max, std::min
 
 MTypeId boneDynamicsNode::s_id(nodeIds::boneDynamicsNode);
 
@@ -268,7 +279,7 @@ MStatus boneDynamicsNode::initialize()
     nAttr.setMax(360);
 
     // radius
-    s_radius = nAttr.create("radius", "r", MFnNumericData::kDouble, 0.0);
+    s_radius = nAttr.create("radius", "r", MFnNumericData::kDouble, 0.0); // TODO: Change to MFnUnitAttribute::kDistance
     nAttr.setKeyable(true);
     nAttr.setMin(0);
 
