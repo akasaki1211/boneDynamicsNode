@@ -74,6 +74,12 @@ MObject boneDynamicsNode::s_capsuleColMtxB;
 MObject boneDynamicsNode::s_capsuleColRadA;
 MObject boneDynamicsNode::s_capsuleColRadB;
 
+MObject boneDynamicsNode::s_capsuleColliderInput;
+MObject boneDynamicsNode::s_capsuleColliderMatrix;
+MObject boneDynamicsNode::s_capsuleColliderHeight;
+MObject boneDynamicsNode::s_capsuleColliderRadiusA;
+MObject boneDynamicsNode::s_capsuleColliderRadiusB;
+
 MObject boneDynamicsNode::s_iPlaneCollider;
 MObject boneDynamicsNode::s_iPlaneColMtx;
 
@@ -336,6 +342,31 @@ MStatus boneDynamicsNode::initialize()
     cmpAttr.setReadable(true);
     cmpAttr.setUsesArrayDataBuilder(true);
 
+    // capsuleCollider (*Using one center matrix and height)
+    s_capsuleColliderMatrix = mAttr.create("capsuleColliderMatrix", "ccimtx");
+    mAttr.setKeyable(true);
+
+    s_capsuleColliderHeight = nAttr.create("capsuleColliderHeight", "ccih", MFnNumericData::kDouble, 0.0);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0);
+
+    s_capsuleColliderRadiusA = nAttr.create("capsuleColliderRadiusA", "ccirada", MFnNumericData::kDouble, 0.0);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0);
+
+    s_capsuleColliderRadiusB = nAttr.create("capsuleColliderRadiusB", "cciradb", MFnNumericData::kDouble, 0.0);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0);
+
+    s_capsuleColliderInput = cmpAttr.create("capsuleColliderInput", "cci");
+    cmpAttr.setArray(true);
+    cmpAttr.addChild(s_capsuleColliderMatrix);
+    cmpAttr.addChild(s_capsuleColliderHeight);
+    cmpAttr.addChild(s_capsuleColliderRadiusA);
+    cmpAttr.addChild(s_capsuleColliderRadiusB);
+    cmpAttr.setReadable(true);
+    cmpAttr.setUsesArrayDataBuilder(true);
+
     // infinitePlaneCollider
     s_iPlaneColMtx = mAttr.create("infinitePlaneColMatrix", "pcmtx");
     mAttr.setKeyable(true);
@@ -420,6 +451,11 @@ MStatus boneDynamicsNode::initialize()
     addAttribute(s_capsuleColRadA);
     addAttribute(s_capsuleColRadB);
     addAttribute(s_capsuleCollider);
+    addAttribute(s_capsuleColliderMatrix);
+    addAttribute(s_capsuleColliderHeight);
+    addAttribute(s_capsuleColliderRadiusA);
+    addAttribute(s_capsuleColliderRadiusB);
+    addAttribute(s_capsuleColliderInput);
     addAttribute(s_iPlaneColMtx);
     addAttribute(s_iPlaneCollider);
     addAttribute(s_meshCollider);
@@ -483,6 +519,11 @@ MStatus boneDynamicsNode::initialize()
     attributeAffects(s_capsuleColRadA, s_outputRotate);
     attributeAffects(s_capsuleColRadB, s_outputRotate);
     attributeAffects(s_capsuleCollider, s_outputRotate);
+    attributeAffects(s_capsuleColliderMatrix, s_outputRotate);
+    attributeAffects(s_capsuleColliderHeight, s_outputRotate);
+    attributeAffects(s_capsuleColliderRadiusA, s_outputRotate);
+    attributeAffects(s_capsuleColliderRadiusB, s_outputRotate);
+    attributeAffects(s_capsuleColliderInput, s_outputRotate);
     attributeAffects(s_iPlaneColMtx, s_outputRotate);
     attributeAffects(s_iPlaneCollider, s_outputRotate);
     attributeAffects(s_meshCollider, s_outputRotate);
@@ -772,6 +813,9 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         
     MArrayDataHandle& capsuleColArrayHandle = data.inputArrayValue(s_capsuleCollider);
     const unsigned int ccCount = capsuleColArrayHandle.elementCount();
+
+    MArrayDataHandle& capsuleColiderInputArrayHandle = data.inputArrayValue(s_capsuleColliderInput);
+    const unsigned int cciCount = capsuleColiderInputArrayHandle.elementCount();
         
     MArrayDataHandle& iPlaneColArrayHandle = data.inputArrayValue(s_iPlaneCollider);
     const unsigned int pcCount = iPlaneColArrayHandle.elementCount();
@@ -784,6 +828,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     MVector sphereCol_p;
     double sphereCol_s[3];
     double sphereCol_r;
+
     MTransformationMatrix capsuleCol_mA;
     MTransformationMatrix capsuleCol_mB;
     MVector capsuleCol_pA;
@@ -791,6 +836,16 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     double capsuleCol_s[3];
     double capsuleCol_rA;
     double capsuleCol_rB;
+    
+    // Using one center matrix and height
+    MMatrix capsuleColMatrix;
+    double capsuleColHeight;
+    MVector capsuleColPointA;
+    MVector capsuleColPointB;
+    double capsuleColScale[3];
+    double capsuleColRadiusA;
+    double capsuleColRadiusB;
+    
     MTransformationMatrix iPlaneCol_m;
     MVector iPlaneCol_p;
     MVector iPlaneCol_n;
@@ -863,6 +918,60 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
                 const MVector q = capsuleCol_pA + (ab * t);
                 v = nextPosition - q;
                 r = radius + (capsuleCol_rA * (1.0 - ratio) + capsuleCol_rB * ratio);
+                if (v * v < r * r)
+                {
+                    nextPosition = q + (v.normal() * r);
+                };
+            };
+        };
+
+        //capsule collision (*Using one center matrix and height)
+        for (unsigned int i = 0; i < cciCount; i++) {
+            capsuleColiderInputArrayHandle.jumpToArrayElement(i);
+            MDataHandle& capsuleColliderInput = capsuleColiderInputArrayHandle.inputValue();
+            
+            capsuleColMatrix = capsuleColliderInput.child(s_capsuleColliderMatrix).asMatrix();
+            
+            const MTransformationMatrix capsuleColTransfomMatrix(capsuleColMatrix);
+            capsuleColTransfomMatrix.getScale(capsuleColScale, MSpace::kWorld);
+
+            capsuleColHeight = capsuleColliderInput.child(s_capsuleColliderHeight).asDouble();
+            
+            capsuleColPointA = MVector(MPoint(0, capsuleColHeight * 0.5, 0) * capsuleColMatrix);
+            capsuleColPointB = MVector(MPoint(0, -capsuleColHeight * 0.5, 0) * capsuleColMatrix);
+
+            capsuleColRadiusA = capsuleColliderInput.child(s_capsuleColliderRadiusA).asDouble() * capsuleColScale[2];
+            capsuleColRadiusB = capsuleColliderInput.child(s_capsuleColliderRadiusB).asDouble() * capsuleColScale[2];
+
+            const double h = (capsuleColPointB - capsuleColPointA).length();
+            const MVector ab = (capsuleColPointB - capsuleColPointA).normal();
+
+            const double t = ab * (nextPosition - capsuleColPointA);
+            const double ratio = t / h;
+
+            if (ratio <= 0)
+            {
+                v = nextPosition - capsuleColPointA;
+                r = capsuleColRadiusA + radius;
+                if (v * v < r * r)
+                {
+                    nextPosition = capsuleColPointA + (v.normal() * r);
+                };
+            }
+            else if (ratio >= 1)
+            {
+                v = nextPosition - capsuleColPointB;
+                r = capsuleColRadiusB + radius;
+                if (v * v < r * r)
+                {
+                    nextPosition = capsuleColPointB + (v.normal() * r);
+                };
+            }
+            else
+            {
+                const MVector q = capsuleColPointA + (ab * t);
+                v = nextPosition - q;
+                r = radius + (capsuleColRadiusA * (1.0 - ratio) + capsuleColRadiusB * ratio);
                 if (v * v < r * r)
                 {
                     nextPosition = q + (v.normal() * r);

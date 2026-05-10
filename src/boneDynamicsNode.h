@@ -91,6 +91,13 @@ public:
     static MObject s_capsuleColRadA;    // capsuleCollider radius A
     static MObject s_capsuleColRadB;    // capsuleCollider radius B
 
+    // Using one center matrix and height
+    static MObject s_capsuleColliderInput;   // capsuleCollider array
+    static MObject s_capsuleColliderMatrix;  // capsuleCollider matrix
+    static MObject s_capsuleColliderHeight;  // capsuleCollider height
+    static MObject s_capsuleColliderRadiusA; // capsuleCollider radius A
+    static MObject s_capsuleColliderRadiusB; // capsuleCollider radius B
+
     static MObject s_iPlaneCollider;    // infinitePlaneCollider array
     static MObject s_iPlaneColMtx;      // infinitePlaneCollider matrix
 
