@@ -5,6 +5,7 @@
 #include <maya/MFnUnitAttribute.h>
 #include <maya/MDagPath.h>
 #include <maya/MDrawContext.h>
+#include <maya/MViewport2Renderer.h>
 
 MTypeId capsuleColliderNode::s_id(nodeIds::capsuleColliderNode);
 
@@ -17,11 +18,6 @@ MObject capsuleColliderNode::s_height;
 
 capsuleColliderNode::capsuleColliderNode() {}
 capsuleColliderNode::~capsuleColliderNode() {}
-
-MStatus capsuleColliderNode::compute(const MPlug& plug, MDataBlock& data)
-{
-    return MS::kSuccess;
-}
 
 bool capsuleColliderNode::isBounded() const
 {
@@ -37,6 +33,20 @@ MBoundingBox capsuleColliderNode::boundingBox() const
     return colliderGeometry::makeCapsuleBoundingBox(radiusA, radiusB, height);
 }
 
+MStatus capsuleColliderNode::setDependentsDirty(const MPlug& plug, MPlugArray& plugArray)
+{
+    if (
+        plug == s_radiusA ||
+        plug == s_radiusB ||
+        plug == s_height
+    )
+    {
+        MHWRender::MRenderer::setGeometryDrawDirty(thisMObject(), false);
+    }
+
+    return MS::kSuccess;
+}
+
 void* capsuleColliderNode::creator()
 {
     return new capsuleColliderNode();
@@ -47,16 +57,22 @@ MStatus capsuleColliderNode::initialize()
     MFnUnitAttribute uAttr;
     
     s_radiusA = uAttr.create("radiusA", "ra", MFnUnitAttribute::kDistance, 1.0);
-    uAttr.setKeyable(true);
+    uAttr.setKeyable(false);
+    uAttr.setChannelBox(true);
     uAttr.setMin(0);
+    uAttr.setAffectsAppearance(true);
 
     s_radiusB = uAttr.create("radiusB", "rb", MFnUnitAttribute::kDistance, 1.0);
-    uAttr.setKeyable(true);
+    uAttr.setKeyable(false);
+    uAttr.setChannelBox(true);
     uAttr.setMin(0);
+    uAttr.setAffectsAppearance(true);
 
     s_height = uAttr.create("height", "h", MFnUnitAttribute::kDistance, 2.0 );
-    uAttr.setKeyable(true);
+    uAttr.setKeyable(false);
+    uAttr.setChannelBox(true);
     uAttr.setMin(0);
+    uAttr.setAffectsAppearance(true);
 
     addAttribute(s_radiusA);
     addAttribute(s_radiusB);

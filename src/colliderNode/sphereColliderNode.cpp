@@ -5,6 +5,7 @@
 #include <maya/MFnUnitAttribute.h>
 #include <maya/MDagPath.h>
 #include <maya/MDrawContext.h>
+#include <maya/MViewport2Renderer.h>
 
 MTypeId sphereColliderNode::s_id(nodeIds::sphereColliderNode);
 
@@ -15,11 +16,6 @@ MObject sphereColliderNode::s_radius;
 
 sphereColliderNode::sphereColliderNode() {}
 sphereColliderNode::~sphereColliderNode() {}
-
-MStatus sphereColliderNode::compute(const MPlug& plug, MDataBlock& data)
-{
-    return MS::kSuccess;
-}
 
 bool sphereColliderNode::isBounded() const
 {
@@ -33,6 +29,16 @@ MBoundingBox sphereColliderNode::boundingBox() const
     return colliderGeometry::makeSphereBoundingBox(radius);
 }
 
+MStatus sphereColliderNode::setDependentsDirty(const MPlug& plug, MPlugArray& plugArray)
+{
+    if (plug == s_radius)
+    {
+        MHWRender::MRenderer::setGeometryDrawDirty(thisMObject(), false);
+    }
+
+    return MS::kSuccess;
+}
+
 void* sphereColliderNode::creator()
 {
     return new sphereColliderNode();
@@ -43,7 +49,10 @@ MStatus sphereColliderNode::initialize()
     MFnUnitAttribute uAttr;
 
     s_radius = uAttr.create("radius", "r", MFnUnitAttribute::kDistance, 1.0);
-    uAttr.setKeyable(true);
+    uAttr.setKeyable(false);
+    uAttr.setChannelBox(true);
+    uAttr.setMin(0);
+    uAttr.setAffectsAppearance(true);
 
     addAttribute(s_radius);
 

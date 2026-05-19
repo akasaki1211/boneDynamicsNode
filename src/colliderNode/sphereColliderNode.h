@@ -4,6 +4,7 @@
 #include <maya/MPxDrawOverride.h>
 #include <maya/MHWGeometryUtilities.h>
 #include <maya/MUIDrawManager.h>
+#include <maya/MPlugArray.h>
 
 class sphereColliderNode : public MPxLocatorNode
 {
@@ -11,10 +12,13 @@ public:
     sphereColliderNode();
     ~sphereColliderNode() override;
 
-    MStatus compute(const MPlug& plug, MDataBlock& data) override;
+    // no compute
 
     bool isBounded() const override;
     MBoundingBox boundingBox() const override;
+
+    // Explicitly notify Viewport 2.0 when inputs related to drawing become dirty
+    MStatus setDependentsDirty(const MPlug& plug, MPlugArray& plugArray) override;
 
     static void* creator();
     static MStatus initialize();
