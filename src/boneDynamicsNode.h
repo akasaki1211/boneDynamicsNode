@@ -106,9 +106,13 @@ public:
     
     // output
     static MObject s_outputRotate;       // output euler rotation
+    static MObject s_outputEndMatrix;    // output end world matrix
+
+    // visualization output
+    static MObject s_visualizeCollisionRadius;
+    static MObject s_visualizeAngleLimitMatrix;
 
 private:
-    //static double getFPS();
     void angleLimit(const MVector& pivot, const MVector& a, MVector& b, const double limitAngle);
     void distanceConstraint(const MVector& pivot, MVector& point, double distance);
     void getClosestPoint(const MObject& mesh, const MPoint& position, MPoint& closestPoint, MVector& closestNormal);
@@ -125,4 +129,6 @@ private:
     std::uint32_t m_rngState[4];
     MVector m_turbulenceVector;       // turbulence vector
     MVector m_turbulenceVectorChange; // vector that changes the turbulenceVector
+
+    MStatus computeSimulation(MDataBlock& data);
 };

@@ -1,6 +1,7 @@
 #include "boneDynamicsNode.h"
 #include "colliderNode/sphereColliderNode.h"
 #include "colliderNode/capsuleColliderNode.h"
+#include "visualizerNode/boneDynamicsVisualizer.h"
 
 #include <maya/MFnPlugin.h>
 #include <maya/MDrawRegistry.h>
@@ -8,6 +9,7 @@
 #define boneDynamicsNodeName "boneDynamicsNode"
 #define sphereColliderNodeName "sphereColliderNode"
 #define capsuleColliderNodeName "capsuleColliderNode"
+#define boneDynamicsVisualizerName "boneDynamicsVisualizer"
 
 MStatus initializePlugin(MObject obj)
 {
@@ -79,6 +81,32 @@ MStatus initializePlugin(MObject obj)
         return status;
     }
 
+    // boneDynamicsVisualizer
+    status = plugin.registerNode(
+        boneDynamicsVisualizerName,
+        boneDynamicsVisualizer::s_id,
+        boneDynamicsVisualizer::creator,
+        boneDynamicsVisualizer::initialize,
+        MPxNode::kLocatorNode,
+        &boneDynamicsVisualizer::s_drawDbClassification
+    );
+    if (!status)
+    {
+        status.perror("register " boneDynamicsVisualizerName);
+        return status;
+    }
+
+    status = MHWRender::MDrawRegistry::registerDrawOverrideCreator(
+        boneDynamicsVisualizer::s_drawDbClassification,
+        boneDynamicsVisualizer::s_drawRegistrantId,
+        visualizerDrawOverride::creator
+    );
+    if (!status)
+    {
+        status.perror("registerDrawOverrideCreator " boneDynamicsVisualizerName);
+        return status;
+    }
+
     return MS::kSuccess;
 }
 
@@ -87,10 +115,31 @@ MStatus uninitializePlugin(MObject obj)
     MStatus status;
     MFnPlugin plugin(obj);
 
+    // boneDynamicsVisualizer
+    status = MHWRender::MDrawRegistry::deregisterDrawOverrideCreator(
+        boneDynamicsVisualizer::s_drawDbClassification,
+        boneDynamicsVisualizer::s_drawRegistrantId
+    );
+
+    if (!status)
+    {
+        status.perror("deregisterDrawOverrideCreator " boneDynamicsVisualizerName);
+        return status;
+    }
+
+    status = plugin.deregisterNode(boneDynamicsVisualizer::s_id);
+
+    if (!status)
+    {
+        status.perror("deregisterNode " boneDynamicsVisualizerName);
+        return status;
+    }
+
     // capsuleColliderNode
     status = MHWRender::MDrawRegistry::deregisterDrawOverrideCreator(
         capsuleColliderNode::s_drawDbClassification,
-        capsuleColliderNode::s_drawRegistrantId);
+        capsuleColliderNode::s_drawRegistrantId
+    );
 
     if (!status)
     {
