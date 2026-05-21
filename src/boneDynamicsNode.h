@@ -118,6 +118,51 @@ private:
     void getClosestPoint(const MObject& mesh, const MPoint& position, MPoint& closestPoint, MVector& closestNormal);
     
     static const MEulerRotation::RotationOrder ROTATION_ORDER = MEulerRotation::RotationOrder::kXYZ;
+
+    struct InitialPoseData
+    {
+        // offset matrix
+        MMatrix offsetMatrix;
+        double offsetMatrixWeight;
+    
+        // bone
+        //MVector boneTranslate;
+        //MVector boneJointOrient;
+        //MMatrix boneParentMatrix;
+        //MMatrix boneParentInverseMatrix;
+        //MVector boneScale;
+        //MVector boneInverseScale;
+
+        // end
+        //MVector endTranslate;
+        //MVector endScale;
+
+        // rotation offset
+        //MVector rotationOffset;
+        MEulerRotation rotationOffsetEuler; // used for reset and initialization
+        MMatrix roMatrix;
+        //MMatrix roInverseMatrix;
+
+        // joint orient matrix
+        //MMatrix joMatrix;
+        //MMatrix joInverseMatrix;
+
+        // initial world position and initial world matrix
+        MMatrix boneInitialWorldMatrix;
+        MMatrix boneInitialParentInverseMatrix;
+        MVector boneWorldTranslate;
+        MVector endWorldTranslate;
+        //MPoint scaledEndTranslate;
+        MMatrix initialEndWorldMatrix; // used for reset and initialization
+
+        // radius
+        double radius;
+        
+        // bone length
+        double distance;
+    };
+
+    InitialPoseData buildInitialPoseData(MDataBlock& data) const;
     
     bool m_init;
     MMatrix m_prevOffsetMatrix;

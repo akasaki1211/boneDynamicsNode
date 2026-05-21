@@ -19,6 +19,7 @@ namespace
 {
     MMatrix resetScaleMatrix(MMatrix originalMatrix)
     {
+        // override scale to 1 on the given matrix
         MTransformationMatrix transform(originalMatrix);
         double newScale[3] = {1.0, 1.0, 1.0};
         transform.setScale(newScale, MSpace::kTransform);
@@ -688,24 +689,106 @@ void boneDynamicsNode::getClosestPoint(const MObject& mesh, const MPoint& point,
     fnMesh.getClosestPointAndNormal(point, closestPoint, closestNormal, MSpace::kWorld);
 }
 
+boneDynamicsNode::InitialPoseData boneDynamicsNode::buildInitialPoseData(MDataBlock& data) const
+{
+    InitialPoseData pose;
+
+    // offset matrix inputs
+    pose.offsetMatrix = data.inputValue(s_offsetMatrix).asMatrix();
+    pose.offsetMatrixWeight = data.inputValue(s_offsetMatrixWeight).asDouble();
+
+    // bone inputs
+    const MVector& boneTranslate = data.inputValue(s_boneTranslate).asVector();
+    const MVector& boneJointOrient = data.inputValue(s_boneJointOrient).asVector();
+    const MMatrix& boneParentMatrix = data.inputValue(s_boneParentMatrix).asMatrix();
+    const MMatrix& boneParentInverseMatrix = data.inputValue(s_boneParentInverseMatrix).asMatrix();
+    const MVector& boneScale = data.inputValue(s_boneScale).asVector();
+    const MVector& boneInverseScaleInput = data.inputValue(s_boneInverseScale).asVector();
+    
+    // end inputs
+    const MVector& endTranslate = data.inputValue(s_endTranslate).asVector();
+    const MVector& endScale = data.inputValue(s_endScale).asVector();
+
+    // rotation offset
+    const MVector& rotationOffset = data.inputValue(s_rotationOffset).asVector();
+
+    // rotation offset matrix
+    pose.rotationOffsetEuler = MEulerRotation(rotationOffset, ROTATION_ORDER);
+    pose.roMatrix = pose.rotationOffsetEuler.asMatrix();
+
+    // bone matrix
+    MTransformationMatrix boneTransformationMatrix;
+    boneTransformationMatrix.setTranslation(boneTranslate, MSpace::kWorld);
+    const MMatrix boneMatrix = boneTransformationMatrix.asMatrix();
+    
+    // bone world position
+    const MPoint boneWorldTranslatePoint = MPoint(boneTranslate) * boneParentMatrix;
+    pose.boneWorldTranslate = MVector(boneWorldTranslatePoint);
+
+    // bone initial world matrix
+    const MMatrix joMatrix = MEulerRotation(boneJointOrient, ROTATION_ORDER).asMatrix();
+    pose.boneInitialWorldMatrix = pose.roMatrix * joMatrix * boneMatrix * boneParentMatrix;
+
+    // bone initial world inverse matrix
+    const MMatrix roInverseMatrix = !pose.roMatrix.isEquivalent(MMatrix::identity) ? pose.roMatrix.inverse() : MMatrix::identity;
+    const MMatrix joInverseMatrix = !joMatrix.isEquivalent(MMatrix::identity) ? joMatrix.inverse() : MMatrix::identity;
+    pose.boneInitialParentInverseMatrix = boneParentInverseMatrix * joInverseMatrix * roInverseMatrix;
+
+    // end world position
+    const MVector boneInverseScale(
+        1.0 / boneInverseScaleInput.x, 
+        1.0 / boneInverseScaleInput.y, 
+        1.0 / boneInverseScaleInput.z
+    );
+    const MPoint scaledEndTranslate(
+        endTranslate.x * boneScale.x * boneInverseScale.x, 
+        endTranslate.y * boneScale.y * boneInverseScale.y, 
+        endTranslate.z * boneScale.z * boneInverseScale.z
+    );
+    const MPoint endWorldTranslatePoint = scaledEndTranslate * pose.boneInitialWorldMatrix;
+    pose.endWorldTranslate = MVector(endWorldTranslatePoint);
+
+    // end init world matrix
+    MTransformationMatrix endTransformationMatrix;
+    endTransformationMatrix.setTranslation(scaledEndTranslate, MSpace::kWorld);
+    pose.initialEndWorldMatrix = resetScaleMatrix(endTransformationMatrix.asMatrix() * pose.boneInitialWorldMatrix);
+
+    // radius
+    double radius = data.inputValue(s_radius).asDouble();
+    const MTransformationMatrix boneParentTransformationMatrix(boneParentMatrix);
+    double boneParentScale[3];
+    boneParentTransformationMatrix.getScale(boneParentScale, MSpace::kWorld);
+    pose.radius = radius * endScale.z * boneInverseScale.z * boneParentScale[2]; // Specified by scale Z
+
+    // bone length
+    pose.distance = (pose.endWorldTranslate - pose.boneWorldTranslate).length();
+    
+    return pose;
+}
+
 MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
 {
     // output data handles
     MDataHandle& outputRotateHandle = data.outputValue(s_outputRotate);
     MDataHandle& outputEndMatrixHandle = data.outputValue(s_outputEndMatrix);
+
+    // build initial pose data
+    InitialPoseData initialPose = buildInitialPoseData(data);
     
+    // check enable
     const bool enable = data.inputValue(s_enable).asBool();
     if (!enable)
     {
-        //return MS::kUnknownParameter;
         outputRotateHandle.set3Double(0.0, 0.0, 0.0);
         outputRotateHandle.setClean();
-        // TODO: Set End World Matrix to initial pose
+
+        outputEndMatrixHandle.setMMatrix(initialPose.initialEndWorldMatrix);
         outputEndMatrixHandle.setClean();
 
         return MS::kSuccess;
     }
 
+    /*
     // offset matrix
     const MMatrix& offsetMatrix = data.inputValue(s_offsetMatrix).asMatrix();
     const double offsetMatrixWeight = data.inputValue(s_offsetMatrixWeight).asDouble();
@@ -768,15 +851,15 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
     radius *= endScale.z * boneInverseScale.z * boneParentScale[2]; // Specified by scale Z
 
     // bone length
-    const double distance = (endWorldTranslate - boneWorldTranslate).length();
+    const double distance = (endWorldTranslate - boneWorldTranslate).length();*/
 
     // set visualization output values
     MDataHandle& collisionRadiusHandle = data.outputValue(s_visualizeCollisionRadius);
-    collisionRadiusHandle.setDouble(radius);
+    collisionRadiusHandle.setDouble(initialPose.radius);
     collisionRadiusHandle.setClean();
 
     MDataHandle& angleLimitMatrixHandle = data.outputValue(s_visualizeAngleLimitMatrix);
-    angleLimitMatrixHandle.setMMatrix(resetScaleMatrix(boneInitialWorldMatrix));
+    angleLimitMatrixHandle.setMMatrix(resetScaleMatrix(initialPose.boneInitialWorldMatrix));
     angleLimitMatrixHandle.setClean();
 
     // dynamic parameters
@@ -796,9 +879,10 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
     
     // reset and initialization
     if (time <= resetTime || m_init) {
-        m_prevOffsetMatrix = offsetMatrix;
-        m_position = endWorldTranslate;
+        m_prevOffsetMatrix = initialPose.offsetMatrix;
+        m_position = initialPose.endWorldTranslate;
         m_velocity = MVector();
+        m_init = false;
 
         if (enableTurbulence) {
             m_turbulenceVector = MVector();
@@ -811,12 +895,14 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
             m_rngState[3] = 0;
         }
 
-        m_init = false;
-        
-        outputRotateHandle.set3Double(rotationOffsetEuler.x, rotationOffsetEuler.y, rotationOffsetEuler.z);
+        outputRotateHandle.set3Double(
+            initialPose.rotationOffsetEuler.x, 
+            initialPose.rotationOffsetEuler.y, 
+            initialPose.rotationOffsetEuler.z
+        );
         outputRotateHandle.setClean();
 
-        outputEndMatrixHandle.setMMatrix(resetScaleMatrix(endTransformationMatrix.asMatrix() * boneInitialWorldMatrix));
+        outputEndMatrixHandle.setMMatrix(initialPose.initialEndWorldMatrix);
         outputEndMatrixHandle.setClean();
         
         return MS::kSuccess;
@@ -829,8 +915,8 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
     const double dt2 = dt * dt;
 
     // position offset
-    const MPoint offsetedPosition = MPoint(m_position) * m_prevOffsetMatrix.inverse() * offsetMatrix;
-    m_position = MVector(offsetedPosition) * offsetMatrixWeight + m_position * (1.0 - offsetMatrixWeight);
+    const MPoint offsetedPosition = MPoint(m_position) * m_prevOffsetMatrix.inverse() * initialPose.offsetMatrix;
+    m_position = MVector(offsetedPosition) * initialPose.offsetMatrixWeight + m_position * (1.0 - initialPose.offsetMatrixWeight);
     
     // velocity damping
     m_velocity *= (1.0 - damping);
@@ -878,7 +964,7 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
 
     // spring force
     const int elasticForceFunctionValue = data.inputValue(s_elasticForceFunction).asShort();
-    const MVector springVector = (endWorldTranslate - nextPosition);
+    const MVector springVector = (initialPose.endWorldTranslate - nextPosition);
     const double springVectorLength = springVector.length();
     MVector springForce;
 
@@ -980,7 +1066,7 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
     for (int i = 0; i < iter; i++)
     {
         // distance constraint
-        distanceConstraint(boneWorldTranslate, nextPosition, distance);
+        distanceConstraint(initialPose.boneWorldTranslate, nextPosition, initialPose.distance);
         
         //sphere collision
         for (unsigned int i = 0; i < scCount; i++) {
@@ -992,7 +1078,7 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
             sphereCol_r = sphereCollider.child(s_sphereColRad).asDouble() * sphereCol_s[2];
                 
             v = nextPosition - sphereCol_p;
-            r = sphereCol_r + radius;
+            r = sphereCol_r + initialPose.radius;
             if (v * v < r * r)
             {
                 nextPosition = sphereCol_p + (v.normal() * r);
@@ -1019,7 +1105,7 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
             if (ratio <= 0)
             {
                 v = nextPosition - capsuleCol_pA;
-                r = capsuleCol_rA + radius;
+                r = capsuleCol_rA + initialPose.radius;
                 if (v * v < r * r)
                 {
                     nextPosition = capsuleCol_pA + (v.normal() * r);
@@ -1028,7 +1114,7 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
             else if (ratio >= 1)
             {
                 v = nextPosition - capsuleCol_pB;
-                r = capsuleCol_rB + radius;
+                r = capsuleCol_rB + initialPose.radius;
                 if (v * v < r * r)
                 {
                     nextPosition = capsuleCol_pB + (v.normal() * r);
@@ -1038,7 +1124,7 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
             {
                 const MVector q = capsuleCol_pA + (ab * t);
                 v = nextPosition - q;
-                r = radius + (capsuleCol_rA * (1.0 - ratio) + capsuleCol_rB * ratio);
+                r = initialPose.radius + (capsuleCol_rA * (1.0 - ratio) + capsuleCol_rB * ratio);
                 if (v * v < r * r)
                 {
                     nextPosition = q + (v.normal() * r);
@@ -1073,7 +1159,7 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
             if (ratio <= 0)
             {
                 v = nextPosition - capsuleColPointA;
-                r = capsuleColRadiusA + radius;
+                r = capsuleColRadiusA + initialPose.radius;
                 if (v * v < r * r)
                 {
                     nextPosition = capsuleColPointA + (v.normal() * r);
@@ -1082,7 +1168,7 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
             else if (ratio >= 1)
             {
                 v = nextPosition - capsuleColPointB;
-                r = capsuleColRadiusB + radius;
+                r = capsuleColRadiusB + initialPose.radius;
                 if (v * v < r * r)
                 {
                     nextPosition = capsuleColPointB + (v.normal() * r);
@@ -1092,7 +1178,7 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
             {
                 const MVector q = capsuleColPointA + (ab * t);
                 v = nextPosition - q;
-                r = radius + (capsuleColRadiusA * (1.0 - ratio) + capsuleColRadiusB * ratio);
+                r = initialPose.radius + (capsuleColRadiusA * (1.0 - ratio) + capsuleColRadiusB * ratio);
                 if (v * v < r * r)
                 {
                     nextPosition = q + (v.normal() * r);
@@ -1109,9 +1195,9 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
             iPlaneCol_n = MVector::yAxis.transformAsNormal(iPlaneCol_m.asMatrix()); // Specified by y-axis
                 
             const double distancePointPlane = iPlaneCol_n * (nextPosition - iPlaneCol_p);
-            if (distancePointPlane - radius < 0)
+            if (distancePointPlane - initialPose.radius < 0)
             {
-                nextPosition = nextPosition - (iPlaneCol_n * (distancePointPlane - radius));
+                nextPosition = nextPosition - (iPlaneCol_n * (distancePointPlane - initialPose.radius));
             };
         };
 
@@ -1134,9 +1220,9 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
             const double distanceContactPoint = closestNormal * contactVec;
             
             // If it is penetrated in the surface, it will be pushed out
-            if (distanceContactPoint - radius < 0.0) {
+            if (distanceContactPoint - initialPose.radius < 0.0) {
                 // If it is completely penetrated, it uses the closest normal to push out, if it is only in contact, it uses the contactVec to push out.
-                MVector pushOutPos = MVector(closestPoint) + ((distanceContactPoint < 0) ? closestNormal : contactVec.normal()) * radius;
+                MVector pushOutPos = MVector(closestPoint) + ((distanceContactPoint < 0) ? closestNormal : contactVec.normal()) * initialPose.radius;
                 
                 // If the position after push out is within meshColCutoff from the current position, it will be pushed out.
                 if ((nextPosition - pushOutPos).length() < meshColCutoff) {
@@ -1148,15 +1234,15 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
         //ground collision
         if (enableGroundCol)
         {
-            nextPosition[1] = nextPosition[1] < (groundHeight + radius) ? (groundHeight + radius) : nextPosition[1]; // Y-Up only
+            nextPosition[1] = nextPosition[1] < (groundHeight + initialPose.radius) ? (groundHeight + initialPose.radius) : nextPosition[1]; // Y-Up only
         };
 
         // angle limit
         if (enableAngleLimit)
         {
             angleLimit(
-                boneWorldTranslate, 
-                endWorldTranslate, 
+                initialPose.boneWorldTranslate, 
+                initialPose.endWorldTranslate, 
                 nextPosition, 
                 mathUtils::degToRad(angleLimitDegrees / 2.0)
             );
@@ -1167,27 +1253,27 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
     if (iter == 0 && enableAngleLimit)
     {
         angleLimit(
-            boneWorldTranslate,
-            endWorldTranslate,
+            initialPose.boneWorldTranslate,
+            initialPose.endWorldTranslate,
             nextPosition,
             mathUtils::degToRad(angleLimitDegrees / 2.0)
         );
     }
 
     // distance constraint
-    distanceConstraint(boneWorldTranslate, nextPosition, distance);
+    distanceConstraint(initialPose.boneWorldTranslate, nextPosition, initialPose.distance);
     
     // update velocity, position, offset matrix
     m_velocity = (nextPosition - m_position) / dt;
     m_position = nextPosition;
-    m_prevOffsetMatrix = offsetMatrix;
+    m_prevOffsetMatrix = initialPose.offsetMatrix;
 
     // output local euler rotation
-    const MMatrix boneInitialInverseMatrix = boneParentInverseMatrix * joInverseMatrix * roInverseMatrix;
-    const MVector initVec = (endWorldTranslate - boneWorldTranslate) * boneInitialInverseMatrix;
-    const MVector targetVec = (nextPosition - boneWorldTranslate) * boneInitialInverseMatrix;
+    //const MMatrix boneInitialParentInverseMatrix = boneParentInverseMatrix * joInverseMatrix * roInverseMatrix;
+    const MVector initVec = (initialPose.endWorldTranslate - initialPose.boneWorldTranslate) * initialPose.boneInitialParentInverseMatrix;
+    const MVector targetVec = (nextPosition - initialPose.boneWorldTranslate) * initialPose.boneInitialParentInverseMatrix;
     const MQuaternion quat(initVec, targetVec);
-    const MTransformationMatrix offseted_rotation = quat.asMatrix() * roMatrix;
+    const MTransformationMatrix offseted_rotation = quat.asMatrix() * initialPose.roMatrix;
     const MQuaternion offseted_quat = offseted_rotation.rotation();
     const MEulerRotation rot = offseted_quat.asEulerRotation();
     
@@ -1197,7 +1283,7 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
     // end world matrix output
     MTransformationMatrix outEndTransformationMatrix;
     outEndTransformationMatrix.setTranslation(targetVec, MSpace::kWorld);
-    outputEndMatrixHandle.setMMatrix(resetScaleMatrix(outEndTransformationMatrix.asMatrix() * boneInitialWorldMatrix));
+    outputEndMatrixHandle.setMMatrix(resetScaleMatrix(outEndTransformationMatrix.asMatrix() * initialPose.boneInitialWorldMatrix));
     outputEndMatrixHandle.setClean();    
 
     return MS::kSuccess;
@@ -1212,6 +1298,9 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     }
     else if (computePlug == s_visualizeCollisionRadius || computePlug == s_visualizeAngleLimitMatrix)
     {
+        // build initial pose data
+        InitialPoseData initialPose = buildInitialPoseData(data);
+        /*
         // bone
         const MVector& boneTranslate = data.inputValue(s_boneTranslate).asVector();
         const MVector& boneJointOrient = data.inputValue(s_boneJointOrient).asVector();
@@ -1245,15 +1334,15 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         const MTransformationMatrix boneParentTransformationMatrix(boneParentMatrix);
         double boneParentScale[3];
         boneParentTransformationMatrix.getScale(boneParentScale, MSpace::kWorld);
-        radius *= endScale.z * boneInverseScale.z * boneParentScale[2]; // Specified by scale Z
+        radius *= endScale.z * boneInverseScale.z * boneParentScale[2]; // Specified by scale Z*/
 
         // visualization output values
         MDataHandle& collisionRadiusHandle = data.outputValue(s_visualizeCollisionRadius);
-        collisionRadiusHandle.setDouble(radius);
+        collisionRadiusHandle.setDouble(initialPose.radius);
         collisionRadiusHandle.setClean();
 
         MDataHandle& angleLimitMatrixHandle = data.outputValue(s_visualizeAngleLimitMatrix);
-        angleLimitMatrixHandle.setMMatrix(resetScaleMatrix(boneInitialWorldMatrix));
+        angleLimitMatrixHandle.setMMatrix(resetScaleMatrix(initialPose.boneInitialWorldMatrix));
         angleLimitMatrixHandle.setClean();
         
         return MS::kSuccess;
