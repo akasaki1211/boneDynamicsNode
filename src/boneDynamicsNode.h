@@ -106,14 +106,45 @@ public:
     
     // output
     static MObject s_outputRotate;       // output euler rotation
+    static MObject s_outputEndMatrix;    // output end world matrix
+
+    // visualization output
+    static MObject s_visualizeCollisionRadius;   // scaled radius for visualization
+    static MObject s_visualizeAngleLimitMatrix;  // matrix to place the cone
 
 private:
-    //static double getFPS();
     void angleLimit(const MVector& pivot, const MVector& a, MVector& b, const double limitAngle);
     void distanceConstraint(const MVector& pivot, MVector& point, double distance);
     void getClosestPoint(const MObject& mesh, const MPoint& position, MPoint& closestPoint, MVector& closestNormal);
     
     static const MEulerRotation::RotationOrder ROTATION_ORDER = MEulerRotation::RotationOrder::kXYZ;
+
+    struct InitialPoseData
+    {
+        MMatrix offsetMatrix;
+        double offsetMatrixWeight;
+        
+        MEulerRotation rotationOffsetEuler; // used for reset and initialization
+        MMatrix roMatrix;
+        
+        MVector boneWorldTranslate;
+        MMatrix boneInitialWorldMatrixExcludeRO;
+        MMatrix boneInitialWorldMatrix;
+        MMatrix boneInitialParentInverseMatrix;
+        
+        MVector endWorldTranslate;
+        MMatrix initialEndWorldMatrixExcludeRO; // used for disabled
+        MMatrix initialEndWorldMatrix; // used for reset and initialization
+        
+        double radius;
+        double distance;
+    };
+
+    InitialPoseData buildInitialPoseData(MDataBlock& data) const;
+
+    MStatus computeSimulation(MDataBlock& data);
+    MStatus computeVisualization(MDataBlock& data);
+    void setVisualizationOutputs(MDataBlock& data, const InitialPoseData& pose, const bool enable = true);
     
     bool m_init;
     MMatrix m_prevOffsetMatrix;

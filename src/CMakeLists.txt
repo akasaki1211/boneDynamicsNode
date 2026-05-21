@@ -16,6 +16,10 @@ set(SOURCE_FILES
    colliderNode/sphereColliderNode.cpp
    colliderNode/capsuleColliderNode.h
    colliderNode/capsuleColliderNode.cpp
+   visualizerNode/visualizerGeometry.h
+   visualizerNode/visualizerGeometry.cpp
+   visualizerNode/boneDynamicsVisualizer.h
+   visualizerNode/boneDynamicsVisualizer.cpp
    pluginMain.cpp
 ) 
 

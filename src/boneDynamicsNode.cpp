@@ -15,6 +15,35 @@
 
 #include <algorithm> // std::max, std::min
 
+namespace
+{
+    MMatrix resetScaleMatrix(MMatrix originalMatrix)
+    {
+        // override scale to 1 on the given matrix
+        MTransformationMatrix transform(originalMatrix);
+        double newScale[3] = {1.0, 1.0, 1.0};
+        transform.setScale(newScale, MSpace::kTransform);
+        MMatrix scaleResetMatrix = transform.asMatrix();
+        return scaleResetMatrix;
+    }
+
+    /*double getFPS()
+    {
+        float fps = 24.0f;
+        MTime::Unit unit = MTime::uiUnit();
+        if (unit != MTime::kInvalid)
+        {
+            MTime time(1.0, MTime::kSeconds);
+            fps = static_cast<float>(time.as(unit));
+        }
+        if (fps <= 0.f)
+        {
+            fps = 24.0f;
+        }
+        return fps;
+    }*/
+}
+
 MTypeId boneDynamicsNode::s_id(nodeIds::boneDynamicsNode);
 
 MObject boneDynamicsNode::s_enable;
@@ -87,6 +116,10 @@ MObject boneDynamicsNode::s_meshCollider;
 MObject boneDynamicsNode::s_meshColCutoff;
 
 MObject boneDynamicsNode::s_outputRotate;
+MObject boneDynamicsNode::s_outputEndMatrix;
+
+MObject boneDynamicsNode::s_visualizeCollisionRadius;
+MObject boneDynamicsNode::s_visualizeAngleLimitMatrix;
 
 boneDynamicsNode::boneDynamicsNode() : m_init(true), m_lastSeed(-1), m_lastFrame(-1) {
     m_rngState[0] = 0;
@@ -147,7 +180,6 @@ MStatus boneDynamicsNode::initialize()
     s_resetTime = uAttr.create("resetTime", "rt", MFnUnitAttribute::kTime, 0.0);
     uAttr.setKeyable(true);
 
-    //s_fps = nAttr.create("fps", "fps", MFnNumericData::kDouble, getFPS());
     s_fps = nAttr.create("fps", "fps", MFnNumericData::kDouble, 30.0);
     nAttr.setKeyable(true);
     nAttr.setMin(1);
@@ -395,158 +427,174 @@ MStatus boneDynamicsNode::initialize()
     nAttr.setStorable(false);
     nAttr.setWritable(false);
 
+    s_outputEndMatrix = mAttr.create("outputEndMatrix", "oemtx");
+    mAttr.setWritable(false);
+    mAttr.setStorable(false);
+
+    // visualization output attributes
+    s_visualizeCollisionRadius = nAttr.create("visualizeCollisionRadius", "vcr", MFnNumericData::kDouble, 0.0);
+    nAttr.setWritable(false);
+    nAttr.setStorable(false);
+    nAttr.setMin(0.0);
+
+    s_visualizeAngleLimitMatrix = mAttr.create("visualizeAngleLimitMatrix", "valm" );
+    mAttr.setWritable(false);
+    mAttr.setStorable(false);
 
     // addAttribute
-    addAttribute(s_enable);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_enable));
 
-    addAttribute(s_time);
-    addAttribute(s_resetTime);
-    addAttribute(s_fps);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_time));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_resetTime));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_fps));
 
-    addAttribute(s_offsetMatrix);
-    addAttribute(s_offsetMatrixWeight);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_offsetMatrix));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_offsetMatrixWeight));
 
-    addAttribute(s_boneTranslate);
-    addAttribute(s_boneJointOrient);
-    addAttribute(s_boneParentMatrix);
-    addAttribute(s_boneParentInverseMatrix);
-    addAttribute(s_boneScale);
-    addAttribute(s_boneInverseScale);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneTranslate));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneJointOrient));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneParentMatrix));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneParentInverseMatrix));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneScale));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneInverseScale));
 
-    addAttribute(s_endTranslate);
-    addAttribute(s_endScale);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_endTranslate));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_endScale));
 
-    addAttribute(s_rotationOffset);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_rotationOffset));
 
-    addAttribute(s_damping);
-    addAttribute(s_elasticity);
-    addAttribute(s_elasticForceFunction);
-    addAttribute(s_stiffness);
-    addAttribute(s_mass);
-    addAttribute(s_gravity);
-    addAttribute(s_gravityMultiply);
-    addAttribute(s_additionalForce);
-    addAttribute(s_additionalForceScale);
-    
-    addAttribute(s_enableTurbulence);
-    addAttribute(s_turbulenceSeed);
-    addAttribute(s_turbulenceStrength);
-    addAttribute(m_turbulenceVectorChangeScale);
-    addAttribute(m_turbulenceVectorChangeMax);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_damping));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_elasticity));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_elasticForceFunction));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_stiffness));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_mass));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_gravity));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_gravityMultiply));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_additionalForce));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_additionalForceScale));
 
-    addAttribute(s_enableAngleLimit);
-    addAttribute(s_angleLimit);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_enableTurbulence));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_turbulenceSeed));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_turbulenceStrength));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(m_turbulenceVectorChangeScale));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(m_turbulenceVectorChangeMax));
 
-    addAttribute(s_radius);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_enableAngleLimit));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_angleLimit));
 
-    addAttribute(s_iterations);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_radius));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_iterations));
 
-    addAttribute(s_enableGroundCol);
-    addAttribute(s_groundHeight);
-    addAttribute(s_sphereColMtx);
-    addAttribute(s_sphereColRad);
-    addAttribute(s_sphereCollider);
-    addAttribute(s_capsuleColMtxA);
-    addAttribute(s_capsuleColMtxB);
-    addAttribute(s_capsuleColRadA);
-    addAttribute(s_capsuleColRadB);
-    addAttribute(s_capsuleCollider);
-    addAttribute(s_capsuleColliderMatrix);
-    addAttribute(s_capsuleColliderHeight);
-    addAttribute(s_capsuleColliderRadiusA);
-    addAttribute(s_capsuleColliderRadiusB);
-    addAttribute(s_capsuleColliderInput);
-    addAttribute(s_iPlaneColMtx);
-    addAttribute(s_iPlaneCollider);
-    addAttribute(s_meshCollider);
-    addAttribute(s_meshColCutoff);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_enableGroundCol));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_groundHeight));
 
-    addAttribute(s_outputRotate);
-    
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_sphereCollider));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_capsuleCollider));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_capsuleColliderInput));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_iPlaneCollider));
+
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_meshCollider));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_meshColCutoff));
+
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_outputRotate));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_outputEndMatrix));
+
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_visualizeCollisionRadius));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_visualizeAngleLimitMatrix));
 
     // attributeAffects
-    attributeAffects(s_enable, s_outputRotate);
+    const MObject simulationOutputs[] = {
+        s_outputRotate,
+        s_outputEndMatrix
+    };
 
-    attributeAffects(s_time, s_outputRotate);
-    attributeAffects(s_resetTime, s_outputRotate);
-    attributeAffects(s_fps, s_outputRotate);
+    const MObject simulationInputs[] = {
+        s_enable,
 
-    attributeAffects(s_offsetMatrix, s_outputRotate);
-    attributeAffects(s_offsetMatrixWeight, s_outputRotate);
+        s_time,
+        s_resetTime,
+        s_fps,
 
-    attributeAffects(s_boneTranslate, s_outputRotate);
-    attributeAffects(s_boneJointOrient, s_outputRotate);
-    attributeAffects(s_boneParentMatrix, s_outputRotate);
-    attributeAffects(s_boneParentInverseMatrix, s_outputRotate);
-    attributeAffects(s_endTranslate, s_outputRotate);
+        s_offsetMatrix,
+        s_offsetMatrixWeight,
 
-    attributeAffects(s_rotationOffset, s_outputRotate);
+        s_boneTranslate,
+        s_boneJointOrient,
+        s_boneParentMatrix,
+        s_boneParentInverseMatrix,
+        s_endTranslate,
 
-    attributeAffects(s_boneScale, s_outputRotate);
-    attributeAffects(s_boneInverseScale, s_outputRotate);
-    attributeAffects(s_endScale, s_outputRotate);
-    
-    attributeAffects(s_damping, s_outputRotate);
-    attributeAffects(s_elasticity, s_outputRotate);
-    attributeAffects(s_elasticForceFunction, s_outputRotate);
-    attributeAffects(s_stiffness, s_outputRotate);
-    attributeAffects(s_mass, s_outputRotate);
-    attributeAffects(s_gravity, s_outputRotate);
-    attributeAffects(s_gravityMultiply, s_outputRotate);
-    attributeAffects(s_additionalForce, s_outputRotate);
-    attributeAffects(s_additionalForceScale, s_outputRotate);
+        s_rotationOffset,
 
-    attributeAffects(s_enableTurbulence, s_outputRotate);
-    attributeAffects(s_turbulenceSeed, s_outputRotate);
-    attributeAffects(s_turbulenceStrength, s_outputRotate);
-    attributeAffects(m_turbulenceVectorChangeScale, s_outputRotate);
-    attributeAffects(m_turbulenceVectorChangeMax, s_outputRotate);
+        s_boneScale,
+        s_boneInverseScale,
+        s_endScale,
 
-    attributeAffects(s_enableAngleLimit, s_outputRotate);
-    attributeAffects(s_angleLimit, s_outputRotate);
+        s_damping,
+        s_elasticity,
+        s_elasticForceFunction,
+        s_stiffness,
+        s_mass,
+        s_gravity,
+        s_gravityMultiply,
+        s_additionalForce,
+        s_additionalForceScale,
 
-    attributeAffects(s_radius, s_outputRotate);
+        s_enableTurbulence,
+        s_turbulenceSeed,
+        s_turbulenceStrength,
+        m_turbulenceVectorChangeScale,
+        m_turbulenceVectorChangeMax,
 
-    attributeAffects(s_iterations, s_outputRotate);
+        s_enableAngleLimit,
+        s_angleLimit,
 
-    attributeAffects(s_enableGroundCol, s_outputRotate);
-    attributeAffects(s_groundHeight, s_outputRotate);
-    attributeAffects(s_sphereColMtx, s_outputRotate);
-    attributeAffects(s_sphereColRad, s_outputRotate);
-    attributeAffects(s_sphereCollider, s_outputRotate);
-    attributeAffects(s_capsuleColMtxA, s_outputRotate);
-    attributeAffects(s_capsuleColMtxB, s_outputRotate);
-    attributeAffects(s_capsuleColRadA, s_outputRotate);
-    attributeAffects(s_capsuleColRadB, s_outputRotate);
-    attributeAffects(s_capsuleCollider, s_outputRotate);
-    attributeAffects(s_capsuleColliderMatrix, s_outputRotate);
-    attributeAffects(s_capsuleColliderHeight, s_outputRotate);
-    attributeAffects(s_capsuleColliderRadiusA, s_outputRotate);
-    attributeAffects(s_capsuleColliderRadiusB, s_outputRotate);
-    attributeAffects(s_capsuleColliderInput, s_outputRotate);
-    attributeAffects(s_iPlaneColMtx, s_outputRotate);
-    attributeAffects(s_iPlaneCollider, s_outputRotate);
-    attributeAffects(s_meshCollider, s_outputRotate);
-    attributeAffects(s_meshColCutoff, s_outputRotate);
+        s_radius,
+
+        s_iterations,
+
+        s_enableGroundCol,
+        s_groundHeight,
+        s_sphereColMtx,
+        s_sphereColRad,
+        s_sphereCollider,
+        s_capsuleColMtxA,
+        s_capsuleColMtxB,
+        s_capsuleColRadA,
+        s_capsuleColRadB,
+        s_capsuleCollider,
+        s_capsuleColliderMatrix,
+        s_capsuleColliderHeight,
+        s_capsuleColliderRadiusA,
+        s_capsuleColliderRadiusB,
+        s_capsuleColliderInput,
+        s_iPlaneColMtx,
+        s_iPlaneCollider,
+        s_meshCollider,
+        s_meshColCutoff
+    };
+
+    for (const MObject& input : simulationInputs)
+    {
+        for (const MObject& output : simulationOutputs)
+        {
+            CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(input, output));
+        }
+    }
+
+    // visualization affects
+    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_radius, s_visualizeCollisionRadius));
+    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_boneParentMatrix, s_visualizeCollisionRadius));
+    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_boneInverseScale, s_visualizeCollisionRadius));
+    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_endScale, s_visualizeCollisionRadius));
+
+    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_boneParentMatrix, s_visualizeAngleLimitMatrix));
+    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_boneTranslate, s_visualizeAngleLimitMatrix));
+    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_boneJointOrient, s_visualizeAngleLimitMatrix));
+    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_rotationOffset, s_visualizeAngleLimitMatrix));
 
     return MS::kSuccess;
 }
-
-/*double boneDynamicsNode::getFPS()
-{
-    float fps = 24.0f;
-    MTime::Unit unit = MTime::uiUnit();
-    if (unit != MTime::kInvalid)
-    {
-        MTime time(1.0, MTime::kSeconds);
-        fps = static_cast<float>(time.as(unit));
-    }
-    if (fps <= 0.f)
-    {
-        fps = 24.0f;
-    }
-    return fps;
-}*/
 
 void boneDynamicsNode::angleLimit(const MVector& pivot, const MVector& a, MVector& b, const double limitAngle)
 {
@@ -581,42 +629,23 @@ void boneDynamicsNode::getClosestPoint(const MObject& mesh, const MPoint& point,
     fnMesh.getClosestPointAndNormal(point, closestPoint, closestNormal, MSpace::kWorld);
 }
 
-MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
+boneDynamicsNode::InitialPoseData boneDynamicsNode::buildInitialPoseData(MDataBlock& data) const
 {
-    const MPlug computePlug = plug.isChild() ? plug.parent() : plug;
-    if (computePlug != s_outputRotate)
-    {
-        return MS::kUnknownParameter;
-    }
+    InitialPoseData pose;
 
-    // output data handles
-    MDataHandle& outputRotateHandle = data.outputValue(s_outputRotate);
-    
-    const bool enable = data.inputValue(s_enable).asBool();
-    if (!enable)
-    {
-        //return MS::kUnknownParameter;
-        outputRotateHandle.set3Double(0.0, 0.0, 0.0);
+    // offset matrix inputs
+    pose.offsetMatrix = data.inputValue(s_offsetMatrix).asMatrix();
+    pose.offsetMatrixWeight = data.inputValue(s_offsetMatrixWeight).asDouble();
 
-        data.setClean(plug);
-
-        return MS::kSuccess;
-    }
-
-    // offset matrix
-    const MMatrix& offsetMatrix = data.inputValue(s_offsetMatrix).asMatrix();
-    const double offsetMatrixWeight = data.inputValue(s_offsetMatrixWeight).asDouble();
-
-    // bone
+    // bone inputs
     const MVector& boneTranslate = data.inputValue(s_boneTranslate).asVector();
     const MVector& boneJointOrient = data.inputValue(s_boneJointOrient).asVector();
     const MMatrix& boneParentMatrix = data.inputValue(s_boneParentMatrix).asMatrix();
     const MMatrix& boneParentInverseMatrix = data.inputValue(s_boneParentInverseMatrix).asMatrix();
     const MVector& boneScale = data.inputValue(s_boneScale).asVector();
     const MVector& boneInverseScaleInput = data.inputValue(s_boneInverseScale).asVector();
-    const MVector boneInverseScale(1.0 / boneInverseScaleInput.x, 1.0 / boneInverseScaleInput.y, 1.0 / boneInverseScaleInput.z);
     
-    // end
+    // end inputs
     const MVector& endTranslate = data.inputValue(s_endTranslate).asVector();
     const MVector& endScale = data.inputValue(s_endScale).asVector();
 
@@ -624,13 +653,8 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     const MVector& rotationOffset = data.inputValue(s_rotationOffset).asVector();
 
     // rotation offset matrix
-    const MEulerRotation rotationOffsetEuler(rotationOffset, ROTATION_ORDER);
-    const MMatrix roMatrix = rotationOffsetEuler.asMatrix();
-    const MMatrix roInverseMatrix = !roMatrix.isEquivalent(MMatrix::identity) ? roMatrix.inverse() : MMatrix::identity;
-
-    // joint orient matrix
-    const MMatrix joMatrix = MEulerRotation(boneJointOrient, ROTATION_ORDER).asMatrix();
-    const MMatrix joInverseMatrix = !joMatrix.isEquivalent(MMatrix::identity) ? joMatrix.inverse() : MMatrix::identity;
+    pose.rotationOffsetEuler = MEulerRotation(rotationOffset, ROTATION_ORDER);
+    pose.roMatrix = pose.rotationOffsetEuler.asMatrix();
 
     // bone matrix
     MTransformationMatrix boneTransformationMatrix;
@@ -639,26 +663,75 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     
     // bone world position
     const MPoint boneWorldTranslatePoint = MPoint(boneTranslate) * boneParentMatrix;
-    const MVector boneWorldTranslate(boneWorldTranslatePoint);
+    pose.boneWorldTranslate = MVector(boneWorldTranslatePoint);
+
+    // bone initial world matrix
+    const MMatrix joMatrix = MEulerRotation(boneJointOrient, ROTATION_ORDER).asMatrix();
+    pose.boneInitialWorldMatrixExcludeRO = joMatrix * boneMatrix * boneParentMatrix;
+    pose.boneInitialWorldMatrix = pose.roMatrix * pose.boneInitialWorldMatrixExcludeRO;
+
+    // bone initial world inverse matrix
+    const MMatrix roInverseMatrix = !pose.roMatrix.isEquivalent(MMatrix::identity) ? pose.roMatrix.inverse() : MMatrix::identity;
+    const MMatrix joInverseMatrix = !joMatrix.isEquivalent(MMatrix::identity) ? joMatrix.inverse() : MMatrix::identity;
+    pose.boneInitialParentInverseMatrix = boneParentInverseMatrix * joInverseMatrix * roInverseMatrix;
 
     // end world position
+    const MVector boneInverseScale(
+        1.0 / boneInverseScaleInput.x, 
+        1.0 / boneInverseScaleInput.y, 
+        1.0 / boneInverseScaleInput.z
+    );
     const MPoint scaledEndTranslate(
         endTranslate.x * boneScale.x * boneInverseScale.x, 
         endTranslate.y * boneScale.y * boneInverseScale.y, 
         endTranslate.z * boneScale.z * boneInverseScale.z
     );
-    const MPoint endWorldTranslatePoint = scaledEndTranslate * roMatrix * joMatrix * boneMatrix * boneParentMatrix;
-    const MVector endWorldTranslate(endWorldTranslatePoint);
+    const MPoint endWorldTranslatePoint = scaledEndTranslate * pose.boneInitialWorldMatrix;
+    pose.endWorldTranslate = MVector(endWorldTranslatePoint);
+
+    // end init world matrix
+    MTransformationMatrix endTransformationMatrix;
+    endTransformationMatrix.setTranslation(scaledEndTranslate, MSpace::kWorld);
+    pose.initialEndWorldMatrix = resetScaleMatrix(endTransformationMatrix.asMatrix() * pose.boneInitialWorldMatrix);
+    pose.initialEndWorldMatrixExcludeRO = resetScaleMatrix(endTransformationMatrix.asMatrix() * pose.boneInitialWorldMatrixExcludeRO);
 
     // radius
     double radius = data.inputValue(s_radius).asDouble();
     const MTransformationMatrix boneParentTransformationMatrix(boneParentMatrix);
     double boneParentScale[3];
     boneParentTransformationMatrix.getScale(boneParentScale, MSpace::kWorld);
-    radius *= endScale.z * boneInverseScale.z * boneParentScale[2]; // Specified by scale Z
+    pose.radius = radius * endScale.z * boneInverseScale.z * boneParentScale[2]; // Specified by scale Z
 
     // bone length
-    const double distance = (endWorldTranslate - boneWorldTranslate).length();
+    pose.distance = (pose.endWorldTranslate - pose.boneWorldTranslate).length();
+    
+    return pose;
+}
+
+MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
+{
+    // output data handles
+    MDataHandle& outputRotateHandle = data.outputValue(s_outputRotate);
+    MDataHandle& outputEndMatrixHandle = data.outputValue(s_outputEndMatrix);
+
+    // build initial pose data
+    InitialPoseData initialPose = buildInitialPoseData(data);
+    
+    // check enable
+    const bool enable = data.inputValue(s_enable).asBool();
+    if (!enable)
+    {
+        outputRotateHandle.set3Double(0.0, 0.0, 0.0);
+        outputRotateHandle.setClean();
+
+        outputEndMatrixHandle.setMMatrix(initialPose.initialEndWorldMatrixExcludeRO);
+        outputEndMatrixHandle.setClean();
+
+        return MS::kSuccess;
+    }
+
+    // set visualization output values
+    setVisualizationOutputs(data, initialPose, enable);
 
     // dynamic parameters
     const double damping = data.inputValue(s_damping).asDouble();
@@ -677,9 +750,10 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     
     // reset and initialization
     if (time <= resetTime || m_init) {
-        m_prevOffsetMatrix = offsetMatrix;
-        m_position = endWorldTranslate;
+        m_prevOffsetMatrix = initialPose.offsetMatrix;
+        m_position = initialPose.endWorldTranslate;
         m_velocity = MVector();
+        m_init = false;
 
         if (enableTurbulence) {
             m_turbulenceVector = MVector();
@@ -692,11 +766,15 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
             m_rngState[3] = 0;
         }
 
-        m_init = false;
-        
-        outputRotateHandle.set3Double(rotationOffsetEuler.x, rotationOffsetEuler.y, rotationOffsetEuler.z);
+        outputRotateHandle.set3Double(
+            initialPose.rotationOffsetEuler.x, 
+            initialPose.rotationOffsetEuler.y, 
+            initialPose.rotationOffsetEuler.z
+        );
+        outputRotateHandle.setClean();
 
-        data.setClean(plug);
+        outputEndMatrixHandle.setMMatrix(initialPose.initialEndWorldMatrix);
+        outputEndMatrixHandle.setClean();
         
         return MS::kSuccess;
     }
@@ -708,8 +786,8 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     const double dt2 = dt * dt;
 
     // position offset
-    const MPoint offsetedPosition = MPoint(m_position) * m_prevOffsetMatrix.inverse() * offsetMatrix;
-    m_position = MVector(offsetedPosition) * offsetMatrixWeight + m_position * (1.0 - offsetMatrixWeight);
+    const MPoint offsetedPosition = MPoint(m_position) * m_prevOffsetMatrix.inverse() * initialPose.offsetMatrix;
+    m_position = MVector(offsetedPosition) * initialPose.offsetMatrixWeight + m_position * (1.0 - initialPose.offsetMatrixWeight);
     
     // velocity damping
     m_velocity *= (1.0 - damping);
@@ -757,7 +835,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
 
     // spring force
     const int elasticForceFunctionValue = data.inputValue(s_elasticForceFunction).asShort();
-    const MVector springVector = (endWorldTranslate - nextPosition);
+    const MVector springVector = (initialPose.endWorldTranslate - nextPosition);
     const double springVectorLength = springVector.length();
     MVector springForce;
 
@@ -859,7 +937,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     for (int i = 0; i < iter; i++)
     {
         // distance constraint
-        distanceConstraint(boneWorldTranslate, nextPosition, distance);
+        distanceConstraint(initialPose.boneWorldTranslate, nextPosition, initialPose.distance);
         
         //sphere collision
         for (unsigned int i = 0; i < scCount; i++) {
@@ -871,7 +949,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
             sphereCol_r = sphereCollider.child(s_sphereColRad).asDouble() * sphereCol_s[2];
                 
             v = nextPosition - sphereCol_p;
-            r = sphereCol_r + radius;
+            r = sphereCol_r + initialPose.radius;
             if (v * v < r * r)
             {
                 nextPosition = sphereCol_p + (v.normal() * r);
@@ -898,7 +976,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
             if (ratio <= 0)
             {
                 v = nextPosition - capsuleCol_pA;
-                r = capsuleCol_rA + radius;
+                r = capsuleCol_rA + initialPose.radius;
                 if (v * v < r * r)
                 {
                     nextPosition = capsuleCol_pA + (v.normal() * r);
@@ -907,7 +985,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
             else if (ratio >= 1)
             {
                 v = nextPosition - capsuleCol_pB;
-                r = capsuleCol_rB + radius;
+                r = capsuleCol_rB + initialPose.radius;
                 if (v * v < r * r)
                 {
                     nextPosition = capsuleCol_pB + (v.normal() * r);
@@ -917,7 +995,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
             {
                 const MVector q = capsuleCol_pA + (ab * t);
                 v = nextPosition - q;
-                r = radius + (capsuleCol_rA * (1.0 - ratio) + capsuleCol_rB * ratio);
+                r = initialPose.radius + (capsuleCol_rA * (1.0 - ratio) + capsuleCol_rB * ratio);
                 if (v * v < r * r)
                 {
                     nextPosition = q + (v.normal() * r);
@@ -952,7 +1030,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
             if (ratio <= 0)
             {
                 v = nextPosition - capsuleColPointA;
-                r = capsuleColRadiusA + radius;
+                r = capsuleColRadiusA + initialPose.radius;
                 if (v * v < r * r)
                 {
                     nextPosition = capsuleColPointA + (v.normal() * r);
@@ -961,7 +1039,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
             else if (ratio >= 1)
             {
                 v = nextPosition - capsuleColPointB;
-                r = capsuleColRadiusB + radius;
+                r = capsuleColRadiusB + initialPose.radius;
                 if (v * v < r * r)
                 {
                     nextPosition = capsuleColPointB + (v.normal() * r);
@@ -971,7 +1049,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
             {
                 const MVector q = capsuleColPointA + (ab * t);
                 v = nextPosition - q;
-                r = radius + (capsuleColRadiusA * (1.0 - ratio) + capsuleColRadiusB * ratio);
+                r = initialPose.radius + (capsuleColRadiusA * (1.0 - ratio) + capsuleColRadiusB * ratio);
                 if (v * v < r * r)
                 {
                     nextPosition = q + (v.normal() * r);
@@ -988,9 +1066,9 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
             iPlaneCol_n = MVector::yAxis.transformAsNormal(iPlaneCol_m.asMatrix()); // Specified by y-axis
                 
             const double distancePointPlane = iPlaneCol_n * (nextPosition - iPlaneCol_p);
-            if (distancePointPlane - radius < 0)
+            if (distancePointPlane - initialPose.radius < 0)
             {
-                nextPosition = nextPosition - (iPlaneCol_n * (distancePointPlane - radius));
+                nextPosition = nextPosition - (iPlaneCol_n * (distancePointPlane - initialPose.radius));
             };
         };
 
@@ -1013,9 +1091,9 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
             const double distanceContactPoint = closestNormal * contactVec;
             
             // If it is penetrated in the surface, it will be pushed out
-            if (distanceContactPoint - radius < 0.0) {
+            if (distanceContactPoint - initialPose.radius < 0.0) {
                 // If it is completely penetrated, it uses the closest normal to push out, if it is only in contact, it uses the contactVec to push out.
-                MVector pushOutPos = MVector(closestPoint) + ((distanceContactPoint < 0) ? closestNormal : contactVec.normal()) * radius;
+                MVector pushOutPos = MVector(closestPoint) + ((distanceContactPoint < 0) ? closestNormal : contactVec.normal()) * initialPose.radius;
                 
                 // If the position after push out is within meshColCutoff from the current position, it will be pushed out.
                 if ((nextPosition - pushOutPos).length() < meshColCutoff) {
@@ -1027,15 +1105,15 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         //ground collision
         if (enableGroundCol)
         {
-            nextPosition[1] = nextPosition[1] < (groundHeight + radius) ? (groundHeight + radius) : nextPosition[1]; // Y-Up only
+            nextPosition[1] = nextPosition[1] < (groundHeight + initialPose.radius) ? (groundHeight + initialPose.radius) : nextPosition[1]; // Y-Up only
         };
 
         // angle limit
         if (enableAngleLimit)
         {
             angleLimit(
-                boneWorldTranslate, 
-                endWorldTranslate, 
+                initialPose.boneWorldTranslate, 
+                initialPose.endWorldTranslate, 
                 nextPosition, 
                 mathUtils::degToRad(angleLimitDegrees / 2.0)
             );
@@ -1046,32 +1124,75 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     if (iter == 0 && enableAngleLimit)
     {
         angleLimit(
-            boneWorldTranslate,
-            endWorldTranslate,
+            initialPose.boneWorldTranslate,
+            initialPose.endWorldTranslate,
             nextPosition,
             mathUtils::degToRad(angleLimitDegrees / 2.0)
         );
     }
 
     // distance constraint
-    distanceConstraint(boneWorldTranslate, nextPosition, distance);
+    distanceConstraint(initialPose.boneWorldTranslate, nextPosition, initialPose.distance);
     
     // update velocity, position, offset matrix
     m_velocity = (nextPosition - m_position) / dt;
     m_position = nextPosition;
-    m_prevOffsetMatrix = offsetMatrix;
+    m_prevOffsetMatrix = initialPose.offsetMatrix;
 
     // output local euler rotation
-    const MVector initVec = (endWorldTranslate - boneWorldTranslate) * boneParentInverseMatrix * joInverseMatrix * roInverseMatrix;
-    const MVector targetVec = (nextPosition - boneWorldTranslate) * boneParentInverseMatrix * joInverseMatrix * roInverseMatrix;
+    const MVector initVec = (initialPose.endWorldTranslate - initialPose.boneWorldTranslate) * initialPose.boneInitialParentInverseMatrix;
+    const MVector targetVec = (nextPosition - initialPose.boneWorldTranslate) * initialPose.boneInitialParentInverseMatrix;
     const MQuaternion quat(initVec, targetVec);
-    const MTransformationMatrix offseted_rotation = quat.asMatrix() * roMatrix;
+    const MTransformationMatrix offseted_rotation = quat.asMatrix() * initialPose.roMatrix;
     const MQuaternion offseted_quat = offseted_rotation.rotation();
     const MEulerRotation rot = offseted_quat.asEulerRotation();
     
     outputRotateHandle.set3Double(rot.x, rot.y, rot.z);
-        
-    data.setClean(plug);
+    outputRotateHandle.setClean();
+
+    // output end world matrix
+    MTransformationMatrix outEndTransformationMatrix;
+    outEndTransformationMatrix.setTranslation(targetVec, MSpace::kWorld);
+
+    outputEndMatrixHandle.setMMatrix(resetScaleMatrix(outEndTransformationMatrix.asMatrix() * initialPose.boneInitialWorldMatrix));
+    outputEndMatrixHandle.setClean();    
 
     return MS::kSuccess;
+}
+
+MStatus boneDynamicsNode::computeVisualization(MDataBlock& data)
+{
+    InitialPoseData initialPose = buildInitialPoseData(data);
+    const bool enable = data.inputValue(s_enable).asBool();
+    setVisualizationOutputs(data, initialPose, enable);
+    return MS::kSuccess;
+}
+
+void boneDynamicsNode::setVisualizationOutputs(MDataBlock& data, const InitialPoseData& pose, const bool enable)
+{
+    MDataHandle& collisionRadiusHandle = data.outputValue(s_visualizeCollisionRadius);
+    collisionRadiusHandle.setDouble(pose.radius);
+    collisionRadiusHandle.setClean();
+
+    MDataHandle& angleLimitMatrixHandle = data.outputValue(s_visualizeAngleLimitMatrix);
+    angleLimitMatrixHandle.setMMatrix(resetScaleMatrix(enable ? pose.boneInitialWorldMatrix : pose.boneInitialWorldMatrixExcludeRO));
+    angleLimitMatrixHandle.setClean();
+}
+
+MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
+{
+    const MPlug computePlug = plug.isChild() ? plug.parent() : plug;
+    
+    if (computePlug == s_outputRotate || computePlug == s_outputEndMatrix)
+    {
+        return computeSimulation(data);
+    }
+    else if (computePlug == s_visualizeCollisionRadius || computePlug == s_visualizeAngleLimitMatrix)
+    {
+        return computeVisualization(data);
+    }
+    else
+    {
+        return MS::kUnknownParameter;
+    }
 }
