@@ -109,8 +109,8 @@ public:
     static MObject s_outputEndMatrix;    // output end world matrix
 
     // visualization output
-    static MObject s_visualizeCollisionRadius;
-    static MObject s_visualizeAngleLimitMatrix;
+    static MObject s_visualizeCollisionRadius;   // scaled radius for visualization
+    static MObject s_visualizeAngleLimitMatrix;  // matrix to place the cone
 
 private:
     void angleLimit(const MVector& pivot, const MVector& a, MVector& b, const double limitAngle);
@@ -121,48 +121,27 @@ private:
 
     struct InitialPoseData
     {
-        // offset matrix
         MMatrix offsetMatrix;
         double offsetMatrixWeight;
-    
-        // bone
-        //MVector boneTranslate;
-        //MVector boneJointOrient;
-        //MMatrix boneParentMatrix;
-        //MMatrix boneParentInverseMatrix;
-        //MVector boneScale;
-        //MVector boneInverseScale;
-
-        // end
-        //MVector endTranslate;
-        //MVector endScale;
-
-        // rotation offset
-        //MVector rotationOffset;
+        
         MEulerRotation rotationOffsetEuler; // used for reset and initialization
         MMatrix roMatrix;
-        //MMatrix roInverseMatrix;
-
-        // joint orient matrix
-        //MMatrix joMatrix;
-        //MMatrix joInverseMatrix;
-
-        // initial world position and initial world matrix
+        
         MMatrix boneInitialWorldMatrix;
         MMatrix boneInitialParentInverseMatrix;
         MVector boneWorldTranslate;
         MVector endWorldTranslate;
-        //MPoint scaledEndTranslate;
         MMatrix initialEndWorldMatrix; // used for reset and initialization
 
-        // radius
         double radius;
-        
-        // bone length
         double distance;
     };
 
     InitialPoseData buildInitialPoseData(MDataBlock& data) const;
+
+    MStatus computeSimulation(MDataBlock& data);
+    MStatus computeVisualization(MDataBlock& data);
+    void setVisualizationOutputs(MDataBlock& data, const InitialPoseData& pose);
     
     bool m_init;
     MMatrix m_prevOffsetMatrix;
@@ -174,6 +153,4 @@ private:
     std::uint32_t m_rngState[4];
     MVector m_turbulenceVector;       // turbulence vector
     MVector m_turbulenceVectorChange; // vector that changes the turbulenceVector
-
-    MStatus computeSimulation(MDataBlock& data);
 };

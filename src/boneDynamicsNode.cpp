@@ -788,79 +788,8 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
         return MS::kSuccess;
     }
 
-    /*
-    // offset matrix
-    const MMatrix& offsetMatrix = data.inputValue(s_offsetMatrix).asMatrix();
-    const double offsetMatrixWeight = data.inputValue(s_offsetMatrixWeight).asDouble();
-
-    // bone
-    const MVector& boneTranslate = data.inputValue(s_boneTranslate).asVector();
-    const MVector& boneJointOrient = data.inputValue(s_boneJointOrient).asVector();
-    const MMatrix& boneParentMatrix = data.inputValue(s_boneParentMatrix).asMatrix();
-    const MMatrix& boneParentInverseMatrix = data.inputValue(s_boneParentInverseMatrix).asMatrix();
-    const MVector& boneScale = data.inputValue(s_boneScale).asVector();
-    const MVector& boneInverseScaleInput = data.inputValue(s_boneInverseScale).asVector();
-    const MVector boneInverseScale(1.0 / boneInverseScaleInput.x, 1.0 / boneInverseScaleInput.y, 1.0 / boneInverseScaleInput.z);
-    
-    // end
-    const MVector& endTranslate = data.inputValue(s_endTranslate).asVector();
-    const MVector& endScale = data.inputValue(s_endScale).asVector();
-
-    // rotation offset
-    const MVector& rotationOffset = data.inputValue(s_rotationOffset).asVector();
-
-    // rotation offset matrix
-    const MEulerRotation rotationOffsetEuler(rotationOffset, ROTATION_ORDER);
-    const MMatrix roMatrix = rotationOffsetEuler.asMatrix();
-    const MMatrix roInverseMatrix = !roMatrix.isEquivalent(MMatrix::identity) ? roMatrix.inverse() : MMatrix::identity;
-
-    // joint orient matrix
-    const MMatrix joMatrix = MEulerRotation(boneJointOrient, ROTATION_ORDER).asMatrix();
-    const MMatrix joInverseMatrix = !joMatrix.isEquivalent(MMatrix::identity) ? joMatrix.inverse() : MMatrix::identity;
-
-    // bone matrix
-    MTransformationMatrix boneTransformationMatrix;
-    boneTransformationMatrix.setTranslation(boneTranslate, MSpace::kWorld);
-    const MMatrix boneMatrix = boneTransformationMatrix.asMatrix();
-    
-    // bone world position
-    const MPoint boneWorldTranslatePoint = MPoint(boneTranslate) * boneParentMatrix;
-    const MVector boneWorldTranslate(boneWorldTranslatePoint);
-
-    // bone initial world matrix
-    const MMatrix boneInitialWorldMatrix = roMatrix * joMatrix * boneMatrix * boneParentMatrix;
-
-    // end world position
-    const MPoint scaledEndTranslate(
-        endTranslate.x * boneScale.x * boneInverseScale.x, 
-        endTranslate.y * boneScale.y * boneInverseScale.y, 
-        endTranslate.z * boneScale.z * boneInverseScale.z
-    );
-    const MPoint endWorldTranslatePoint = scaledEndTranslate * boneInitialWorldMatrix;
-    const MVector endWorldTranslate(endWorldTranslatePoint);
-
-    // end init world matrix
-    MTransformationMatrix endTransformationMatrix;
-    endTransformationMatrix.setTranslation(scaledEndTranslate, MSpace::kWorld);
-
-    // radius
-    double radius = data.inputValue(s_radius).asDouble();
-    const MTransformationMatrix boneParentTransformationMatrix(boneParentMatrix);
-    double boneParentScale[3];
-    boneParentTransformationMatrix.getScale(boneParentScale, MSpace::kWorld);
-    radius *= endScale.z * boneInverseScale.z * boneParentScale[2]; // Specified by scale Z
-
-    // bone length
-    const double distance = (endWorldTranslate - boneWorldTranslate).length();*/
-
     // set visualization output values
-    MDataHandle& collisionRadiusHandle = data.outputValue(s_visualizeCollisionRadius);
-    collisionRadiusHandle.setDouble(initialPose.radius);
-    collisionRadiusHandle.setClean();
-
-    MDataHandle& angleLimitMatrixHandle = data.outputValue(s_visualizeAngleLimitMatrix);
-    angleLimitMatrixHandle.setMMatrix(resetScaleMatrix(initialPose.boneInitialWorldMatrix));
-    angleLimitMatrixHandle.setClean();
+    setVisualizationOutputs(data, initialPose);
 
     // dynamic parameters
     const double damping = data.inputValue(s_damping).asDouble();
@@ -1269,7 +1198,6 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
     m_prevOffsetMatrix = initialPose.offsetMatrix;
 
     // output local euler rotation
-    //const MMatrix boneInitialParentInverseMatrix = boneParentInverseMatrix * joInverseMatrix * roInverseMatrix;
     const MVector initVec = (initialPose.endWorldTranslate - initialPose.boneWorldTranslate) * initialPose.boneInitialParentInverseMatrix;
     const MVector targetVec = (nextPosition - initialPose.boneWorldTranslate) * initialPose.boneInitialParentInverseMatrix;
     const MQuaternion quat(initVec, targetVec);
@@ -1280,72 +1208,45 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
     outputRotateHandle.set3Double(rot.x, rot.y, rot.z);
     outputRotateHandle.setClean();
 
-    // end world matrix output
+    // output end world matrix
     MTransformationMatrix outEndTransformationMatrix;
     outEndTransformationMatrix.setTranslation(targetVec, MSpace::kWorld);
+    
     outputEndMatrixHandle.setMMatrix(resetScaleMatrix(outEndTransformationMatrix.asMatrix() * initialPose.boneInitialWorldMatrix));
     outputEndMatrixHandle.setClean();    
 
     return MS::kSuccess;
 }
 
+MStatus boneDynamicsNode::computeVisualization(MDataBlock& data)
+{
+    InitialPoseData initialPose = buildInitialPoseData(data);
+    setVisualizationOutputs(data, initialPose);
+    return MS::kSuccess;
+}
+
+void boneDynamicsNode::setVisualizationOutputs(MDataBlock& data, const InitialPoseData& pose)
+{
+    MDataHandle& collisionRadiusHandle = data.outputValue(s_visualizeCollisionRadius);
+    collisionRadiusHandle.setDouble(pose.radius);
+    collisionRadiusHandle.setClean();
+
+    MDataHandle& angleLimitMatrixHandle = data.outputValue(s_visualizeAngleLimitMatrix);
+    angleLimitMatrixHandle.setMMatrix(resetScaleMatrix(pose.boneInitialWorldMatrix));
+    angleLimitMatrixHandle.setClean();
+}
+
 MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
 {
     const MPlug computePlug = plug.isChild() ? plug.parent() : plug;
+    
     if (computePlug == s_outputRotate || computePlug == s_outputEndMatrix)
     {
         return computeSimulation(data);
     }
     else if (computePlug == s_visualizeCollisionRadius || computePlug == s_visualizeAngleLimitMatrix)
     {
-        // build initial pose data
-        InitialPoseData initialPose = buildInitialPoseData(data);
-        /*
-        // bone
-        const MVector& boneTranslate = data.inputValue(s_boneTranslate).asVector();
-        const MVector& boneJointOrient = data.inputValue(s_boneJointOrient).asVector();
-        const MMatrix& boneParentMatrix = data.inputValue(s_boneParentMatrix).asMatrix();
-        const MVector& boneInverseScaleInput = data.inputValue(s_boneInverseScale).asVector();
-        const MVector boneInverseScale(1.0 / boneInverseScaleInput.x, 1.0 / boneInverseScaleInput.y, 1.0 / boneInverseScaleInput.z);
-        
-        // end
-        const MVector& endScale = data.inputValue(s_endScale).asVector();
-
-        // rotation offset
-        const MVector& rotationOffset = data.inputValue(s_rotationOffset).asVector();
-
-        // rotation offset matrix
-        const MEulerRotation rotationOffsetEuler(rotationOffset, ROTATION_ORDER);
-        const MMatrix roMatrix = rotationOffsetEuler.asMatrix();
-        
-        // joint orient matrix
-        const MMatrix joMatrix = MEulerRotation(boneJointOrient, ROTATION_ORDER).asMatrix();
-        
-        // bone matrix
-        MTransformationMatrix boneTransformationMatrix;
-        boneTransformationMatrix.setTranslation(boneTranslate, MSpace::kWorld);
-        const MMatrix boneMatrix = boneTransformationMatrix.asMatrix();
-
-        // bone initial world matrix
-        const MMatrix boneInitialWorldMatrix = roMatrix * joMatrix * boneMatrix * boneParentMatrix;
-
-        // radius
-        double radius = data.inputValue(s_radius).asDouble();
-        const MTransformationMatrix boneParentTransformationMatrix(boneParentMatrix);
-        double boneParentScale[3];
-        boneParentTransformationMatrix.getScale(boneParentScale, MSpace::kWorld);
-        radius *= endScale.z * boneInverseScale.z * boneParentScale[2]; // Specified by scale Z*/
-
-        // visualization output values
-        MDataHandle& collisionRadiusHandle = data.outputValue(s_visualizeCollisionRadius);
-        collisionRadiusHandle.setDouble(initialPose.radius);
-        collisionRadiusHandle.setClean();
-
-        MDataHandle& angleLimitMatrixHandle = data.outputValue(s_visualizeAngleLimitMatrix);
-        angleLimitMatrixHandle.setMMatrix(resetScaleMatrix(initialPose.boneInitialWorldMatrix));
-        angleLimitMatrixHandle.setClean();
-        
-        return MS::kSuccess;
+        return computeVisualization(data);
     }
     else
     {
