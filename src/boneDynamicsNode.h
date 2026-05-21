@@ -127,12 +127,15 @@ private:
         MEulerRotation rotationOffsetEuler; // used for reset and initialization
         MMatrix roMatrix;
         
+        MVector boneWorldTranslate;
+        MMatrix boneInitialWorldMatrixExcludeRO;
         MMatrix boneInitialWorldMatrix;
         MMatrix boneInitialParentInverseMatrix;
-        MVector boneWorldTranslate;
+        
         MVector endWorldTranslate;
+        MMatrix initialEndWorldMatrixExcludeRO; // used for disabled
         MMatrix initialEndWorldMatrix; // used for reset and initialization
-
+        
         double radius;
         double distance;
     };
@@ -141,7 +144,7 @@ private:
 
     MStatus computeSimulation(MDataBlock& data);
     MStatus computeVisualization(MDataBlock& data);
-    void setVisualizationOutputs(MDataBlock& data, const InitialPoseData& pose);
+    void setVisualizationOutputs(MDataBlock& data, const InitialPoseData& pose, const bool enable = true);
     
     bool m_init;
     MMatrix m_prevOffsetMatrix;

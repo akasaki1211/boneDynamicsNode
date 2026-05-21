@@ -727,7 +727,8 @@ boneDynamicsNode::InitialPoseData boneDynamicsNode::buildInitialPoseData(MDataBl
 
     // bone initial world matrix
     const MMatrix joMatrix = MEulerRotation(boneJointOrient, ROTATION_ORDER).asMatrix();
-    pose.boneInitialWorldMatrix = pose.roMatrix * joMatrix * boneMatrix * boneParentMatrix;
+    pose.boneInitialWorldMatrixExcludeRO = joMatrix * boneMatrix * boneParentMatrix;
+    pose.boneInitialWorldMatrix = pose.roMatrix * pose.boneInitialWorldMatrixExcludeRO;
 
     // bone initial world inverse matrix
     const MMatrix roInverseMatrix = !pose.roMatrix.isEquivalent(MMatrix::identity) ? pose.roMatrix.inverse() : MMatrix::identity;
@@ -752,6 +753,7 @@ boneDynamicsNode::InitialPoseData boneDynamicsNode::buildInitialPoseData(MDataBl
     MTransformationMatrix endTransformationMatrix;
     endTransformationMatrix.setTranslation(scaledEndTranslate, MSpace::kWorld);
     pose.initialEndWorldMatrix = resetScaleMatrix(endTransformationMatrix.asMatrix() * pose.boneInitialWorldMatrix);
+    pose.initialEndWorldMatrixExcludeRO = resetScaleMatrix(endTransformationMatrix.asMatrix() * pose.boneInitialWorldMatrixExcludeRO);
 
     // radius
     double radius = data.inputValue(s_radius).asDouble();
@@ -782,14 +784,14 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
         outputRotateHandle.set3Double(0.0, 0.0, 0.0);
         outputRotateHandle.setClean();
 
-        outputEndMatrixHandle.setMMatrix(initialPose.initialEndWorldMatrix);
+        outputEndMatrixHandle.setMMatrix(initialPose.initialEndWorldMatrixExcludeRO);
         outputEndMatrixHandle.setClean();
 
         return MS::kSuccess;
     }
 
     // set visualization output values
-    setVisualizationOutputs(data, initialPose);
+    setVisualizationOutputs(data, initialPose, enable);
 
     // dynamic parameters
     const double damping = data.inputValue(s_damping).asDouble();
@@ -1211,7 +1213,7 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
     // output end world matrix
     MTransformationMatrix outEndTransformationMatrix;
     outEndTransformationMatrix.setTranslation(targetVec, MSpace::kWorld);
-    
+
     outputEndMatrixHandle.setMMatrix(resetScaleMatrix(outEndTransformationMatrix.asMatrix() * initialPose.boneInitialWorldMatrix));
     outputEndMatrixHandle.setClean();    
 
@@ -1221,18 +1223,19 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
 MStatus boneDynamicsNode::computeVisualization(MDataBlock& data)
 {
     InitialPoseData initialPose = buildInitialPoseData(data);
-    setVisualizationOutputs(data, initialPose);
+    const bool enable = data.inputValue(s_enable).asBool();
+    setVisualizationOutputs(data, initialPose, enable);
     return MS::kSuccess;
 }
 
-void boneDynamicsNode::setVisualizationOutputs(MDataBlock& data, const InitialPoseData& pose)
+void boneDynamicsNode::setVisualizationOutputs(MDataBlock& data, const InitialPoseData& pose, const bool enable)
 {
     MDataHandle& collisionRadiusHandle = data.outputValue(s_visualizeCollisionRadius);
     collisionRadiusHandle.setDouble(pose.radius);
     collisionRadiusHandle.setClean();
 
     MDataHandle& angleLimitMatrixHandle = data.outputValue(s_visualizeAngleLimitMatrix);
-    angleLimitMatrixHandle.setMMatrix(resetScaleMatrix(pose.boneInitialWorldMatrix));
+    angleLimitMatrixHandle.setMMatrix(resetScaleMatrix(enable ? pose.boneInitialWorldMatrix : pose.boneInitialWorldMatrixExcludeRO));
     angleLimitMatrixHandle.setClean();
 }
 
