@@ -442,216 +442,156 @@ MStatus boneDynamicsNode::initialize()
     mAttr.setStorable(false);
 
     // addAttribute
-    addAttribute(s_enable);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_enable));
 
-    addAttribute(s_time);
-    addAttribute(s_resetTime);
-    addAttribute(s_fps);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_time));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_resetTime));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_fps));
 
-    addAttribute(s_offsetMatrix);
-    addAttribute(s_offsetMatrixWeight);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_offsetMatrix));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_offsetMatrixWeight));
 
-    addAttribute(s_boneTranslate);
-    addAttribute(s_boneJointOrient);
-    addAttribute(s_boneParentMatrix);
-    addAttribute(s_boneParentInverseMatrix);
-    addAttribute(s_boneScale);
-    addAttribute(s_boneInverseScale);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneTranslate));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneJointOrient));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneParentMatrix));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneParentInverseMatrix));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneScale));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneInverseScale));
 
-    addAttribute(s_endTranslate);
-    addAttribute(s_endScale);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_endTranslate));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_endScale));
 
-    addAttribute(s_rotationOffset);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_rotationOffset));
 
-    addAttribute(s_damping);
-    addAttribute(s_elasticity);
-    addAttribute(s_elasticForceFunction);
-    addAttribute(s_stiffness);
-    addAttribute(s_mass);
-    addAttribute(s_gravity);
-    addAttribute(s_gravityMultiply);
-    addAttribute(s_additionalForce);
-    addAttribute(s_additionalForceScale);
-    
-    addAttribute(s_enableTurbulence);
-    addAttribute(s_turbulenceSeed);
-    addAttribute(s_turbulenceStrength);
-    addAttribute(m_turbulenceVectorChangeScale);
-    addAttribute(m_turbulenceVectorChangeMax);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_damping));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_elasticity));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_elasticForceFunction));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_stiffness));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_mass));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_gravity));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_gravityMultiply));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_additionalForce));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_additionalForceScale));
 
-    addAttribute(s_enableAngleLimit);
-    addAttribute(s_angleLimit);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_enableTurbulence));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_turbulenceSeed));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_turbulenceStrength));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(m_turbulenceVectorChangeScale));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(m_turbulenceVectorChangeMax));
 
-    addAttribute(s_radius);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_enableAngleLimit));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_angleLimit));
 
-    addAttribute(s_iterations);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_radius));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_iterations));
 
-    addAttribute(s_enableGroundCol);
-    addAttribute(s_groundHeight);
-    addAttribute(s_sphereColMtx);
-    addAttribute(s_sphereColRad);
-    addAttribute(s_sphereCollider);
-    addAttribute(s_capsuleColMtxA);
-    addAttribute(s_capsuleColMtxB);
-    addAttribute(s_capsuleColRadA);
-    addAttribute(s_capsuleColRadB);
-    addAttribute(s_capsuleCollider);
-    addAttribute(s_capsuleColliderMatrix);
-    addAttribute(s_capsuleColliderHeight);
-    addAttribute(s_capsuleColliderRadiusA);
-    addAttribute(s_capsuleColliderRadiusB);
-    addAttribute(s_capsuleColliderInput);
-    addAttribute(s_iPlaneColMtx);
-    addAttribute(s_iPlaneCollider);
-    addAttribute(s_meshCollider);
-    addAttribute(s_meshColCutoff);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_enableGroundCol));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_groundHeight));
 
-    addAttribute(s_outputRotate);
-    addAttribute(s_outputEndMatrix);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_sphereCollider));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_capsuleCollider));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_capsuleColliderInput));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_iPlaneCollider));
 
-    addAttribute(s_visualizeCollisionRadius);
-    addAttribute(s_visualizeAngleLimitMatrix);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_meshCollider));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_meshColCutoff));
+
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_outputRotate));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_outputEndMatrix));
+
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_visualizeCollisionRadius));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_visualizeAngleLimitMatrix));
 
     // attributeAffects
-    attributeAffects(s_enable, s_outputRotate);
+    const MObject simulationOutputs[] = {
+        s_outputRotate,
+        s_outputEndMatrix
+    };
 
-    attributeAffects(s_time, s_outputRotate);
-    attributeAffects(s_resetTime, s_outputRotate);
-    attributeAffects(s_fps, s_outputRotate);
+    const MObject simulationInputs[] = {
+        s_enable,
 
-    attributeAffects(s_offsetMatrix, s_outputRotate);
-    attributeAffects(s_offsetMatrixWeight, s_outputRotate);
+        s_time,
+        s_resetTime,
+        s_fps,
 
-    attributeAffects(s_boneTranslate, s_outputRotate);
-    attributeAffects(s_boneJointOrient, s_outputRotate);
-    attributeAffects(s_boneParentMatrix, s_outputRotate);
-    attributeAffects(s_boneParentInverseMatrix, s_outputRotate);
-    attributeAffects(s_endTranslate, s_outputRotate);
+        s_offsetMatrix,
+        s_offsetMatrixWeight,
 
-    attributeAffects(s_rotationOffset, s_outputRotate);
+        s_boneTranslate,
+        s_boneJointOrient,
+        s_boneParentMatrix,
+        s_boneParentInverseMatrix,
+        s_endTranslate,
 
-    attributeAffects(s_boneScale, s_outputRotate);
-    attributeAffects(s_boneInverseScale, s_outputRotate);
-    attributeAffects(s_endScale, s_outputRotate);
-    
-    attributeAffects(s_damping, s_outputRotate);
-    attributeAffects(s_elasticity, s_outputRotate);
-    attributeAffects(s_elasticForceFunction, s_outputRotate);
-    attributeAffects(s_stiffness, s_outputRotate);
-    attributeAffects(s_mass, s_outputRotate);
-    attributeAffects(s_gravity, s_outputRotate);
-    attributeAffects(s_gravityMultiply, s_outputRotate);
-    attributeAffects(s_additionalForce, s_outputRotate);
-    attributeAffects(s_additionalForceScale, s_outputRotate);
+        s_rotationOffset,
 
-    attributeAffects(s_enableTurbulence, s_outputRotate);
-    attributeAffects(s_turbulenceSeed, s_outputRotate);
-    attributeAffects(s_turbulenceStrength, s_outputRotate);
-    attributeAffects(m_turbulenceVectorChangeScale, s_outputRotate);
-    attributeAffects(m_turbulenceVectorChangeMax, s_outputRotate);
+        s_boneScale,
+        s_boneInverseScale,
+        s_endScale,
 
-    attributeAffects(s_enableAngleLimit, s_outputRotate);
-    attributeAffects(s_angleLimit, s_outputRotate);
+        s_damping,
+        s_elasticity,
+        s_elasticForceFunction,
+        s_stiffness,
+        s_mass,
+        s_gravity,
+        s_gravityMultiply,
+        s_additionalForce,
+        s_additionalForceScale,
 
-    attributeAffects(s_radius, s_outputRotate);
+        s_enableTurbulence,
+        s_turbulenceSeed,
+        s_turbulenceStrength,
+        m_turbulenceVectorChangeScale,
+        m_turbulenceVectorChangeMax,
 
-    attributeAffects(s_iterations, s_outputRotate);
+        s_enableAngleLimit,
+        s_angleLimit,
 
-    attributeAffects(s_enableGroundCol, s_outputRotate);
-    attributeAffects(s_groundHeight, s_outputRotate);
-    attributeAffects(s_sphereColMtx, s_outputRotate);
-    attributeAffects(s_sphereColRad, s_outputRotate);
-    attributeAffects(s_sphereCollider, s_outputRotate);
-    attributeAffects(s_capsuleColMtxA, s_outputRotate);
-    attributeAffects(s_capsuleColMtxB, s_outputRotate);
-    attributeAffects(s_capsuleColRadA, s_outputRotate);
-    attributeAffects(s_capsuleColRadB, s_outputRotate);
-    attributeAffects(s_capsuleCollider, s_outputRotate);
-    attributeAffects(s_capsuleColliderMatrix, s_outputRotate);
-    attributeAffects(s_capsuleColliderHeight, s_outputRotate);
-    attributeAffects(s_capsuleColliderRadiusA, s_outputRotate);
-    attributeAffects(s_capsuleColliderRadiusB, s_outputRotate);
-    attributeAffects(s_capsuleColliderInput, s_outputRotate);
-    attributeAffects(s_iPlaneColMtx, s_outputRotate);
-    attributeAffects(s_iPlaneCollider, s_outputRotate);
-    attributeAffects(s_meshCollider, s_outputRotate);
-    attributeAffects(s_meshColCutoff, s_outputRotate);
+        s_radius,
 
+        s_iterations,
 
-    attributeAffects(s_enable, s_outputEndMatrix);
+        s_enableGroundCol,
+        s_groundHeight,
+        s_sphereColMtx,
+        s_sphereColRad,
+        s_sphereCollider,
+        s_capsuleColMtxA,
+        s_capsuleColMtxB,
+        s_capsuleColRadA,
+        s_capsuleColRadB,
+        s_capsuleCollider,
+        s_capsuleColliderMatrix,
+        s_capsuleColliderHeight,
+        s_capsuleColliderRadiusA,
+        s_capsuleColliderRadiusB,
+        s_capsuleColliderInput,
+        s_iPlaneColMtx,
+        s_iPlaneCollider,
+        s_meshCollider,
+        s_meshColCutoff
+    };
 
-    attributeAffects(s_time, s_outputEndMatrix);
-    attributeAffects(s_resetTime, s_outputEndMatrix);
-    attributeAffects(s_fps, s_outputEndMatrix);
-
-    attributeAffects(s_offsetMatrix, s_outputEndMatrix);
-    attributeAffects(s_offsetMatrixWeight, s_outputEndMatrix);
-
-    attributeAffects(s_boneTranslate, s_outputEndMatrix);
-    attributeAffects(s_boneJointOrient, s_outputEndMatrix);
-    attributeAffects(s_boneParentMatrix, s_outputEndMatrix);
-    attributeAffects(s_boneParentInverseMatrix, s_outputEndMatrix);
-    attributeAffects(s_endTranslate, s_outputEndMatrix);
-
-    attributeAffects(s_rotationOffset, s_outputEndMatrix);
-
-    attributeAffects(s_boneScale, s_outputEndMatrix);
-    attributeAffects(s_boneInverseScale, s_outputEndMatrix);
-    attributeAffects(s_endScale, s_outputEndMatrix);
-
-    attributeAffects(s_damping, s_outputEndMatrix);
-    attributeAffects(s_elasticity, s_outputEndMatrix);
-    attributeAffects(s_elasticForceFunction, s_outputEndMatrix);
-    attributeAffects(s_stiffness, s_outputEndMatrix);
-    attributeAffects(s_mass, s_outputEndMatrix);
-    attributeAffects(s_gravity, s_outputEndMatrix);
-    attributeAffects(s_gravityMultiply, s_outputEndMatrix);
-    attributeAffects(s_additionalForce, s_outputEndMatrix);
-    attributeAffects(s_additionalForceScale, s_outputEndMatrix);
-
-    attributeAffects(s_enableTurbulence, s_outputEndMatrix);
-    attributeAffects(s_turbulenceSeed, s_outputEndMatrix);
-    attributeAffects(s_turbulenceStrength, s_outputEndMatrix);
-    attributeAffects(m_turbulenceVectorChangeScale, s_outputEndMatrix);
-    attributeAffects(m_turbulenceVectorChangeMax, s_outputEndMatrix);
-
-    attributeAffects(s_enableAngleLimit, s_outputEndMatrix);
-    attributeAffects(s_angleLimit, s_outputEndMatrix);
-
-    attributeAffects(s_radius, s_outputEndMatrix);
-
-    attributeAffects(s_iterations, s_outputEndMatrix);
-
-    attributeAffects(s_enableGroundCol, s_outputEndMatrix);
-    attributeAffects(s_groundHeight, s_outputEndMatrix);
-    attributeAffects(s_sphereColMtx, s_outputEndMatrix);
-    attributeAffects(s_sphereColRad, s_outputEndMatrix);
-    attributeAffects(s_sphereCollider, s_outputEndMatrix);
-    attributeAffects(s_capsuleColMtxA, s_outputEndMatrix);
-    attributeAffects(s_capsuleColMtxB, s_outputEndMatrix);
-    attributeAffects(s_capsuleColRadA, s_outputEndMatrix);
-    attributeAffects(s_capsuleColRadB, s_outputEndMatrix);
-    attributeAffects(s_capsuleCollider, s_outputEndMatrix);
-    attributeAffects(s_capsuleColliderMatrix, s_outputEndMatrix);
-    attributeAffects(s_capsuleColliderHeight, s_outputEndMatrix);
-    attributeAffects(s_capsuleColliderRadiusA, s_outputEndMatrix);
-    attributeAffects(s_capsuleColliderRadiusB, s_outputEndMatrix);
-    attributeAffects(s_capsuleColliderInput, s_outputEndMatrix);
-    attributeAffects(s_iPlaneColMtx, s_outputEndMatrix);
-    attributeAffects(s_iPlaneCollider, s_outputEndMatrix);
-    attributeAffects(s_meshCollider, s_outputEndMatrix);
-    attributeAffects(s_meshColCutoff, s_outputEndMatrix);
+    for (const MObject& input : simulationInputs)
+    {
+        for (const MObject& output : simulationOutputs)
+        {
+            CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(input, output));
+        }
+    }
 
     // visualization affects
-    attributeAffects(s_radius, s_visualizeCollisionRadius);
-    attributeAffects(s_boneParentMatrix, s_visualizeCollisionRadius);
-    attributeAffects(s_boneInverseScale, s_visualizeCollisionRadius);
-    attributeAffects(s_endScale, s_visualizeCollisionRadius);
+    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_radius, s_visualizeCollisionRadius));
+    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_boneParentMatrix, s_visualizeCollisionRadius));
+    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_boneInverseScale, s_visualizeCollisionRadius));
+    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_endScale, s_visualizeCollisionRadius));
 
-    attributeAffects(s_boneParentMatrix, s_visualizeAngleLimitMatrix);
-    attributeAffects(s_boneTranslate, s_visualizeAngleLimitMatrix);
-    attributeAffects(s_boneJointOrient, s_visualizeAngleLimitMatrix);
-    attributeAffects(s_rotationOffset, s_visualizeAngleLimitMatrix);
+    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_boneParentMatrix, s_visualizeAngleLimitMatrix));
+    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_boneTranslate, s_visualizeAngleLimitMatrix));
+    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_boneJointOrient, s_visualizeAngleLimitMatrix));
+    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_rotationOffset, s_visualizeAngleLimitMatrix));
 
     return MS::kSuccess;
 }
