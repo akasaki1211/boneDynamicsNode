@@ -64,8 +64,8 @@ public:
     static MObject s_enableTurbulence;
     static MObject s_turbulenceSeed;
     static MObject s_turbulenceStrength;
-    static MObject m_turbulenceVectorChangeScale;  // rate of change of the change-vector
-    static MObject m_turbulenceVectorChangeMax;    // max value of the change-vector
+    static MObject s_turbulenceVectorChangeScale;  // rate of change of the change-vector
+    static MObject s_turbulenceVectorChangeMax;    // max value of the change-vector
 
     // angle limit
     static MObject s_enableAngleLimit;  // use angle limit
@@ -141,6 +141,27 @@ private:
     };
 
     InitialPoseData buildInitialPoseData(MDataBlock& data) const;
+
+    struct DynamicsParameters
+    {
+        double damping;
+        double elasticity;
+        short elasticForceFunction;
+        double stiffness;
+        double mass;
+        MVector gravity;
+        double gravityMultiply;
+        
+        MVector additionalForce;
+        double additionalForceScale;
+        bool enableTurbulence;
+        int turbulenceSeed;
+        double turbulenceStrength;
+        double turbulenceVectorChangeScale;
+        double turbulenceVectorChangeMax;
+    };
+
+    DynamicsParameters getDynamicsParameters(MDataBlock& data) const;
 
     MStatus computeSimulation(MDataBlock& data);
     MStatus computeVisualization(MDataBlock& data);

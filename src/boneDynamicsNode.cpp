@@ -80,8 +80,8 @@ MObject boneDynamicsNode::s_additionalForceScale;
 MObject boneDynamicsNode::s_enableTurbulence;
 MObject boneDynamicsNode::s_turbulenceSeed;
 MObject boneDynamicsNode::s_turbulenceStrength;
-MObject boneDynamicsNode::m_turbulenceVectorChangeScale;
-MObject boneDynamicsNode::m_turbulenceVectorChangeMax;
+MObject boneDynamicsNode::s_turbulenceVectorChangeScale;
+MObject boneDynamicsNode::s_turbulenceVectorChangeMax;
 
 MObject boneDynamicsNode::s_enableAngleLimit;
 MObject boneDynamicsNode::s_angleLimit;
@@ -299,11 +299,11 @@ MStatus boneDynamicsNode::initialize()
     nAttr.setKeyable(true);
     nAttr.setMin(0);
 
-    m_turbulenceVectorChangeScale = nAttr.create("turbulenceVectorChangeScale", "wvcs", MFnNumericData::kDouble, 0.05);
+    s_turbulenceVectorChangeScale = nAttr.create("turbulenceVectorChangeScale", "wvcs", MFnNumericData::kDouble, 0.05);
     nAttr.setKeyable(true);
     nAttr.setMin(0);
 
-    m_turbulenceVectorChangeMax = nAttr.create("turbulenceVectorChangeMax", "wvcm", MFnNumericData::kDouble, 0.1);
+    s_turbulenceVectorChangeMax = nAttr.create("turbulenceVectorChangeMax", "wvcm", MFnNumericData::kDouble, 0.1);
     nAttr.setKeyable(true);
     nAttr.setMin(0);
 
@@ -476,8 +476,8 @@ MStatus boneDynamicsNode::initialize()
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_enableTurbulence));
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_turbulenceSeed));
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_turbulenceStrength));
-    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(m_turbulenceVectorChangeScale));
-    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(m_turbulenceVectorChangeMax));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_turbulenceVectorChangeScale));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_turbulenceVectorChangeMax));
 
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_enableAngleLimit));
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_angleLimit));
@@ -543,8 +543,8 @@ MStatus boneDynamicsNode::initialize()
         s_enableTurbulence,
         s_turbulenceSeed,
         s_turbulenceStrength,
-        m_turbulenceVectorChangeScale,
-        m_turbulenceVectorChangeMax,
+        s_turbulenceVectorChangeScale,
+        s_turbulenceVectorChangeMax,
 
         s_enableAngleLimit,
         s_angleLimit,
@@ -708,6 +708,29 @@ boneDynamicsNode::InitialPoseData boneDynamicsNode::buildInitialPoseData(MDataBl
     return pose;
 }
 
+boneDynamicsNode::DynamicsParameters boneDynamicsNode::getDynamicsParameters(MDataBlock& data) const
+{
+    DynamicsParameters params;
+
+    params.damping = data.inputValue(s_damping).asDouble();
+    params.elasticity = data.inputValue(s_elasticity).asDouble();
+    params.elasticForceFunction = data.inputValue(s_elasticForceFunction).asShort();
+    params.stiffness = data.inputValue(s_stiffness).asDouble();
+    params.mass = data.inputValue(s_mass).asDouble();
+    params.gravity = data.inputValue(s_gravity).asVector();
+    params.gravityMultiply = data.inputValue(s_gravityMultiply).asDouble();
+    params.additionalForce = data.inputValue(s_additionalForce).asVector();
+    params.additionalForceScale = data.inputValue(s_additionalForceScale).asDouble();
+    
+    params.enableTurbulence = data.inputValue(s_enableTurbulence).asBool();
+    params.turbulenceSeed = data.inputValue(s_turbulenceSeed).asInt();
+    params.turbulenceStrength = data.inputValue(s_turbulenceStrength).asDouble();
+    params.turbulenceVectorChangeScale = data.inputValue(s_turbulenceVectorChangeScale).asDouble();
+    params.turbulenceVectorChangeMax = data.inputValue(s_turbulenceVectorChangeMax).asDouble();
+
+    return params;
+}
+
 MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
 {
     // output data handles
@@ -734,19 +757,11 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
     setVisualizationOutputs(data, initialPose, enable);
 
     // dynamic parameters
-    const double damping = data.inputValue(s_damping).asDouble();
-    const double elasticity = data.inputValue(s_elasticity).asDouble();
-    const double stiffness = data.inputValue(s_stiffness).asDouble();
-    const double mass = data.inputValue(s_mass).asDouble();
-    const MVector& gravity = data.inputValue(s_gravity).asVector();
-    const double gravityMultiply = data.inputValue(s_gravityMultiply).asDouble();
-    const MVector& additionalForce = data.inputValue(s_additionalForce).asVector();
-    const double additionalForceScale = data.inputValue(s_additionalForceScale).asDouble();
-    
+    DynamicsParameters dynamicsParams = getDynamicsParameters(data);
+
+    // time
     const MTime& time = data.inputValue(s_time).asTime();
     const MTime& resetTime = data.inputValue(s_resetTime).asTime();
-
-    const bool enableTurbulence = data.inputValue(s_enableTurbulence).asBool();
     
     // reset and initialization
     if (time <= resetTime || m_init) {
@@ -755,7 +770,7 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
         m_velocity = MVector();
         m_init = false;
 
-        if (enableTurbulence) {
+        if (dynamicsParams.enableTurbulence) {
             m_turbulenceVector = MVector();
             m_turbulenceVectorChange = MVector();
             m_lastSeed = -1;
@@ -790,40 +805,36 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
     m_position = MVector(offsetedPosition) * initialPose.offsetMatrixWeight + m_position * (1.0 - initialPose.offsetMatrixWeight);
     
     // velocity damping
-    m_velocity *= (1.0 - damping);
+    m_velocity *= (1.0 - dynamicsParams.damping);
     
     // add velocity
     MVector nextPosition = m_position + (m_velocity * dt);
 
     // turbulence vector
-    if (enableTurbulence) {
+    if (dynamicsParams.enableTurbulence) {
         int frame = static_cast<int>(time.as(MTime::uiUnit()));
-        int turbulenceSeed = data.inputValue(s_turbulenceSeed).asInt();
 
-        if (turbulenceSeed != m_lastSeed || frame != m_lastFrame) {
+        if (dynamicsParams.turbulenceSeed != m_lastSeed || frame != m_lastFrame) {
 
             // Init xoshiro128++
-            std::uint32_t s = static_cast<std::uint32_t>(turbulenceSeed) ^ (static_cast<std::uint32_t>(frame) * 0x9e3779b9u);
+            std::uint32_t s = static_cast<std::uint32_t>(dynamicsParams.turbulenceSeed) ^ (static_cast<std::uint32_t>(frame) * 0x9e3779b9u);
             for (int i = 0; i < 4; ++i) {
                 s = s * 1664525u + 1013904223u;
                 m_rngState[i] = s;
             }
-            m_lastSeed = turbulenceSeed;
+            m_lastSeed = dynamicsParams.turbulenceSeed;
             m_lastFrame = frame;
         }
         
-        const double turbulenceVectorChangeScale = data.inputValue(m_turbulenceVectorChangeScale).asDouble();
-        const double turbulenceVectorChangeMax = data.inputValue(m_turbulenceVectorChangeMax).asDouble();
-
         m_turbulenceVectorChange += MVector(
-            mathUtils::randomDouble(m_rngState, turbulenceVectorChangeScale),
-            mathUtils::randomDouble(m_rngState, turbulenceVectorChangeScale),
-            mathUtils::randomDouble(m_rngState, turbulenceVectorChangeScale)
+            mathUtils::randomDouble(m_rngState, dynamicsParams.turbulenceVectorChangeScale),
+            mathUtils::randomDouble(m_rngState, dynamicsParams.turbulenceVectorChangeScale),
+            mathUtils::randomDouble(m_rngState, dynamicsParams.turbulenceVectorChangeScale)
         );
 
-        m_turbulenceVectorChange.x = std::max(-turbulenceVectorChangeMax, std::min(m_turbulenceVectorChange.x, turbulenceVectorChangeMax));
-        m_turbulenceVectorChange.y = std::max(-turbulenceVectorChangeMax, std::min(m_turbulenceVectorChange.y, turbulenceVectorChangeMax));
-        m_turbulenceVectorChange.z = std::max(-turbulenceVectorChangeMax, std::min(m_turbulenceVectorChange.z, turbulenceVectorChangeMax));
+        m_turbulenceVectorChange.x = std::max(-dynamicsParams.turbulenceVectorChangeMax, std::min(m_turbulenceVectorChange.x, dynamicsParams.turbulenceVectorChangeMax));
+        m_turbulenceVectorChange.y = std::max(-dynamicsParams.turbulenceVectorChangeMax, std::min(m_turbulenceVectorChange.y, dynamicsParams.turbulenceVectorChangeMax));
+        m_turbulenceVectorChange.z = std::max(-dynamicsParams.turbulenceVectorChangeMax, std::min(m_turbulenceVectorChange.z, dynamicsParams.turbulenceVectorChangeMax));
 
         m_turbulenceVector += m_turbulenceVectorChange;
         m_turbulenceVector.normalize();
@@ -831,24 +842,23 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
 
     // external force
     // gravity
-    MVector externalForce = gravity * gravityMultiply;
+    MVector externalForce = dynamicsParams.gravity * dynamicsParams.gravityMultiply;
 
     // spring force
-    const int elasticForceFunctionValue = data.inputValue(s_elasticForceFunction).asShort();
     const MVector springVector = (initialPose.endWorldTranslate - nextPosition);
     const double springVectorLength = springVector.length();
     MVector springForce;
 
-    switch (elasticForceFunctionValue) // experimental
+    switch (dynamicsParams.elasticForceFunction) // experimental
     {
         case 0: // Linear
-            springForce = (springVector * elasticity) / mass;
+            springForce = (springVector * dynamicsParams.elasticity) / dynamicsParams.mass;
             break;
         case 1: // Quadratic
-            springForce = (springVector * ((springVectorLength + 1.0) * elasticity)) / mass;
+            springForce = (springVector * ((springVectorLength + 1.0) * dynamicsParams.elasticity)) / dynamicsParams.mass;
             break;
         case 2: // Cubic
-            springForce = (springVector * ((springVectorLength + 1.0) * (springVectorLength + 1.0) * elasticity)) / mass;
+            springForce = (springVector * ((springVectorLength + 1.0) * (springVectorLength + 1.0) * dynamicsParams.elasticity)) / dynamicsParams.mass;
             break;
         default:
             break;
@@ -864,19 +874,18 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
     externalForce += springForce;
     
     // additional force
-    externalForce += (additionalForce * additionalForceScale) / mass;
+    externalForce += (dynamicsParams.additionalForce * dynamicsParams.additionalForceScale) / dynamicsParams.mass;
     
     // turbulence force
-    if (enableTurbulence) {
-        const double turbulenceStrength = data.inputValue(s_turbulenceStrength).asDouble();
-        externalForce += (m_turbulenceVector * turbulenceStrength) / mass;
+    if (dynamicsParams.enableTurbulence) {
+        externalForce += (m_turbulenceVector * dynamicsParams.turbulenceStrength) / dynamicsParams.mass;
     }
 
     // apply external force
     nextPosition += externalForce * dt2;
     
     // apply stiffness
-    nextPosition += (m_position - nextPosition) * stiffness;
+    nextPosition += (m_position - nextPosition) * dynamicsParams.stiffness;
 
     // angle limit
     const bool enableAngleLimit = data.inputValue(s_enableAngleLimit).asBool();
