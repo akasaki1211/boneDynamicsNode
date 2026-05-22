@@ -16,6 +16,8 @@ set(SOURCE_FILES
    colliderNode/sphereColliderNode.cpp
    colliderNode/capsuleColliderNode.h
    colliderNode/capsuleColliderNode.cpp
+   colliderNode/infinitePlaneColliderNode.h
+   colliderNode/infinitePlaneColliderNode.cpp
    visualizerNode/visualizerGeometry.h
    visualizerNode/visualizerGeometry.cpp
    visualizerNode/boneDynamicsVisualizer.h

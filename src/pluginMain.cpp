@@ -1,6 +1,7 @@
 #include "boneDynamicsNode.h"
 #include "colliderNode/sphereColliderNode.h"
 #include "colliderNode/capsuleColliderNode.h"
+#include "colliderNode/infinitePlaneColliderNode.h"
 #include "visualizerNode/boneDynamicsVisualizer.h"
 
 #include <maya/MFnPlugin.h>
@@ -9,6 +10,7 @@
 #define boneDynamicsNodeName "boneDynamicsNode"
 #define sphereColliderNodeName "sphereColliderNode"
 #define capsuleColliderNodeName "capsuleColliderNode"
+#define infinitePlaneColliderNodeName "infinitePlaneColliderNode"
 #define boneDynamicsVisualizerName "boneDynamicsVisualizer"
 
 MStatus initializePlugin(MObject obj)
@@ -81,6 +83,32 @@ MStatus initializePlugin(MObject obj)
         return status;
     }
 
+    // infinitePlaneColliderNode
+    status = plugin.registerNode(
+        infinitePlaneColliderNodeName, 
+        infinitePlaneColliderNode::s_id, 
+        infinitePlaneColliderNode::creator, 
+        infinitePlaneColliderNode::initialize,
+        MPxNode::kLocatorNode,
+        &infinitePlaneColliderNode::s_drawDbClassification
+    );
+    if (!status)
+    {
+        status.perror("register " infinitePlaneColliderNodeName);
+        return status;
+    }
+
+    status = MHWRender::MDrawRegistry::registerDrawOverrideCreator(
+        infinitePlaneColliderNode::s_drawDbClassification,
+        infinitePlaneColliderNode::s_drawRegistrantId,
+        infinitePlaneColliderDrawOverride::creator
+    );
+    if (!status)
+    {
+        status.perror("registerDrawOverrideCreator " infinitePlaneColliderNodeName);
+        return status;
+    }
+
     // boneDynamicsVisualizer
     status = plugin.registerNode(
         boneDynamicsVisualizerName,
@@ -132,6 +160,26 @@ MStatus uninitializePlugin(MObject obj)
     if (!status)
     {
         status.perror("deregisterNode " boneDynamicsVisualizerName);
+        return status;
+    }
+
+    // infinitePlaneColliderNode
+    status = MHWRender::MDrawRegistry::deregisterDrawOverrideCreator(
+        infinitePlaneColliderNode::s_drawDbClassification,
+        infinitePlaneColliderNode::s_drawRegistrantId
+    );
+
+    if (!status)
+    {
+        status.perror("deregisterDrawOverrideCreator " infinitePlaneColliderNodeName);
+        return status;
+    }
+
+    status = plugin.deregisterNode(infinitePlaneColliderNode::s_id);
+
+    if (!status)
+    {
+        status.perror("deregisterNode " infinitePlaneColliderNodeName);
         return status;
     }
 

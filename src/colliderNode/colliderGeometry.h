@@ -28,7 +28,9 @@ namespace colliderGeometry
 
     MBoundingBox makeSphereBoundingBox(double radius);
     MBoundingBox makeCapsuleBoundingBox(double radiusA, double radiusB, double height);
+    MBoundingBox makePlaneBoundingBox(double size = 1.0);
 
     void appendWireSphere(MPointArray& lineList, double radius, int segments = kDefaultSegments);
     void appendWireCapsule(MPointArray& lineList, double radiusA, double radiusB, double height, int segments = kDefaultSegments);
+    void appendWirePlane(MPointArray& lineList, double size = 1.0);
 }

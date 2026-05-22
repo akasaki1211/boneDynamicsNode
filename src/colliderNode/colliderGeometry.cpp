@@ -58,6 +58,16 @@ namespace colliderGeometry
         return MBoundingBox(corner1, corner2);
     }
     
+    MBoundingBox makePlaneBoundingBox(double size)
+    {
+        size = std::max(0.0, size);
+
+        MPoint corner1(-size, 0.0, -size);
+        MPoint corner2(size, size, size);
+
+        return MBoundingBox(corner1, corner2);
+    }
+
     void appendWireSphere(MPointArray& lineList, double radius, int segments)
     {
         radius = std::max(0.0, radius);
@@ -184,5 +194,37 @@ namespace colliderGeometry
                 lineList.append(MPoint(x3, y3 - halfHeight, z3));
             }
         }
+    }
+
+    void appendWirePlane(MPointArray& lineList, double size)
+    {
+        size = std::max(0.0, size);
+        
+        const MPoint a = MPoint(-size, 0.0, -size);
+        const MPoint b = MPoint(size, 0.0, -size);
+        const MPoint c = MPoint(size, 0.0, size);
+        const MPoint d = MPoint(-size, 0.0, size);
+        const MPoint e = MPoint(0.0, size, 0.0);
+
+        lineList.append(a);
+        lineList.append(b);
+
+        lineList.append(b);
+        lineList.append(c);
+
+        lineList.append(c);
+        lineList.append(d);
+        
+        lineList.append(d);
+        lineList.append(a);
+
+        lineList.append(a);
+        lineList.append(c);
+
+        lineList.append(b);
+        lineList.append(d);
+
+        lineList.append(MPoint(0.0, 0.0, 0.0));
+        lineList.append(e);
     }
 }
