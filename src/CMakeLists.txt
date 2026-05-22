@@ -7,12 +7,31 @@ include($ENV{DEVKIT_LOCATION}/cmake/pluginEntry.cmake)
 set(SOURCE_FILES
    boneDynamicsNode.h
    boneDynamicsNode.cpp
+   mathUtils.h
+   mathUtils.cpp
+   nodeIds.h
+   colliderNode/colliderGeometry.h
+   colliderNode/colliderGeometry.cpp
+   colliderNode/sphereColliderNode.h
+   colliderNode/sphereColliderNode.cpp
+   colliderNode/capsuleColliderNode.h
+   colliderNode/capsuleColliderNode.cpp
+   colliderNode/infinitePlaneColliderNode.h
+   colliderNode/infinitePlaneColliderNode.cpp
+   visualizerNode/visualizerGeometry.h
+   visualizerNode/visualizerGeometry.cpp
+   visualizerNode/boneDynamicsVisualizer.h
+   visualizerNode/boneDynamicsVisualizer.cpp
    pluginMain.cpp
 ) 
 
 set(LIBRARIES 
    OpenMaya 
+   OpenMayaRender
+   OpenMayaUI
    Foundation 
 ) 
+
+find_opengl()
 
 build_plugin()
