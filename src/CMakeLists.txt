@@ -7,6 +7,8 @@ include($ENV{DEVKIT_LOCATION}/cmake/pluginEntry.cmake)
 set(SOURCE_FILES
    boneDynamicsNode.h
    boneDynamicsNode.cpp
+   boneDynamicsUtils.h
+   boneDynamicsUtils.cpp
    mathUtils.h
    mathUtils.cpp
    nodeIds.h

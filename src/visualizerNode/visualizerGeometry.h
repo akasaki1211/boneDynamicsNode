@@ -26,10 +26,11 @@ namespace visualizerGeometry
         unsigned int depthPriority;
     };
 
-    bool getBoolPlug(const MObject& node, const MObject& attribute, bool defaultValue);
+    bool getBoolPlug(const MObject& node, const MObject& attribute, bool defaultValue = false);
     //int getIntPlug(const MObject& node, const MObject& attribute, int defaultValue);
-    double getDoublePlug(const MObject& node, const MObject& attribute, double defaultValue);
-    MMatrix getMatrixPlug(const MObject& node, const MObject& attribute, const MMatrix& defaultValue);
+    double getDoublePlug(const MObject& node, const MObject& attribute, double defaultValue = 0.0);
+    MVector getVectorPlug(const MObject& node, const MObject& attribute, const MVector& defaultValue = MVector::zero);
+    MMatrix getMatrixPlug(const MObject& node, const MObject& attribute, const MMatrix& defaultValue = MMatrix::identity);
 
     void appendRadiusSphere(
         MPointArray& lineList, 

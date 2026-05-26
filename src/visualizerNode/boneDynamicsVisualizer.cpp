@@ -1,5 +1,6 @@
 #include "boneDynamicsVisualizer.h"
 #include "visualizerGeometry.h"
+#include "../boneDynamicsUtils.h"
 #include "../nodeIds.h"
 
 #include <maya/MFnUnitAttribute.h>
@@ -15,15 +16,29 @@ MString boneDynamicsVisualizer::s_drawDbClassification("drawdb/geometry/boneDyna
 
 MString boneDynamicsVisualizer::s_drawRegistrantId("boneDynamicsNodePlugin");
 
-MObject boneDynamicsVisualizer::s_endMatrix;
-MObject boneDynamicsVisualizer::s_radius;
-
-MObject boneDynamicsVisualizer::s_angleLimitMatrix;
-MObject boneDynamicsVisualizer::s_angleLimit;
-MObject boneDynamicsVisualizer::s_angleConeSize;
-
 MObject boneDynamicsVisualizer::s_drawAngleLimit;
 MObject boneDynamicsVisualizer::s_drawCollisionRadius;
+
+MObject boneDynamicsVisualizer::s_enable;
+
+MObject boneDynamicsVisualizer::s_outputRotate;
+
+MObject boneDynamicsVisualizer::s_boneTranslate;
+MObject boneDynamicsVisualizer::s_boneJointOrient;
+MObject boneDynamicsVisualizer::s_boneParentMatrix;
+MObject boneDynamicsVisualizer::s_boneParentInverseMatrix;
+MObject boneDynamicsVisualizer::s_boneScale;
+MObject boneDynamicsVisualizer::s_boneInverseScale;
+
+MObject boneDynamicsVisualizer::s_endTranslate;
+MObject boneDynamicsVisualizer::s_endScale;
+
+MObject boneDynamicsVisualizer::s_rotationOffset;
+
+MObject boneDynamicsVisualizer::s_radius;
+
+MObject boneDynamicsVisualizer::s_angleLimit;
+MObject boneDynamicsVisualizer::s_angleConeSize;
 
 boneDynamicsVisualizer::boneDynamicsVisualizer() {}
 
@@ -51,18 +66,86 @@ MStatus boneDynamicsVisualizer::initialize()
     MFnMatrixAttribute mAttr;
     MObject x, y, z;
 
-    s_endMatrix = mAttr.create("endMatrix", "emtx");
+    s_drawAngleLimit = nAttr.create("drawAngleLimit", "dal", MFnNumericData::kBoolean, true);
+    nAttr.setKeyable(true);
+    nAttr.setAffectsAppearance(true);
+
+    s_drawCollisionRadius = nAttr.create("drawCollisionRadius", "dcr", MFnNumericData::kBoolean, true);
+    nAttr.setKeyable(true);
+    nAttr.setAffectsAppearance(true);
+
+    s_enable = nAttr.create("enable", "en", MFnNumericData::kBoolean, true);
+    nAttr.setKeyable(true);
+    nAttr.setAffectsAppearance(true);
+
+    x = uAttr.create("outputRotateX", "outrx", MFnUnitAttribute::kAngle, 0.0);
+    y = uAttr.create("outputRotateY", "outry", MFnUnitAttribute::kAngle, 0.0);
+    z = uAttr.create("outputRotateZ", "outrz", MFnUnitAttribute::kAngle, 0.0);
+    s_outputRotate = nAttr.create("outputRotate", "outr", x, y, z);
+    nAttr.setKeyable(true);
+    nAttr.setAffectsAppearance(true);
+
+    x = nAttr.create("boneTranslateX", "btx", MFnNumericData::kDouble, 0.0);
+    y = nAttr.create("boneTranslateY", "bty", MFnNumericData::kDouble, 0.0);
+    z = nAttr.create("boneTranslateZ", "btz", MFnNumericData::kDouble, 0.0);
+    s_boneTranslate = nAttr.create("boneTranslate", "bt", x, y, z);
+    nAttr.setKeyable(true);
+    nAttr.setAffectsAppearance(true);
+
+    x = uAttr.create("boneJointOrientX", "bjox", MFnUnitAttribute::kAngle, 0.0);
+    y = uAttr.create("boneJointOrientY", "bjoy", MFnUnitAttribute::kAngle, 0.0);
+    z = uAttr.create("boneJointOrientZ", "bjoz", MFnUnitAttribute::kAngle, 0.0);
+    s_boneJointOrient = nAttr.create("boneJointOrient", "bjo", x, y, z);
+    nAttr.setKeyable(true);
+    nAttr.setAffectsAppearance(true);
+
+    s_boneParentMatrix = mAttr.create("boneParentMatrix", "bpmtx");
     mAttr.setKeyable(true);
     mAttr.setAffectsAppearance(true);
+
+    s_boneParentInverseMatrix = mAttr.create("boneParentInverseMatrix", "bpimtx");
+    mAttr.setKeyable(true);
+    mAttr.setAffectsAppearance(true);
+
+    x = nAttr.create("boneScaleX", "bsx", MFnNumericData::kDouble, 1.0);
+    y = nAttr.create("boneScaleY", "bsy", MFnNumericData::kDouble, 1.0);
+    z = nAttr.create("boneScaleZ", "bsz", MFnNumericData::kDouble, 1.0);
+    s_boneScale = nAttr.create("boneScale", "bs", x, y, z);
+    nAttr.setKeyable(true);
+    nAttr.setAffectsAppearance(true);
+
+    x = nAttr.create("boneInverseScaleX", "bisx", MFnNumericData::kDouble, 1.0);
+    y = nAttr.create("boneInverseScaleY", "bisy", MFnNumericData::kDouble, 1.0);
+    z = nAttr.create("boneInverseScaleZ", "bisz", MFnNumericData::kDouble, 1.0);
+    s_boneInverseScale = nAttr.create("boneInverseScale", "bis", x, y, z);
+    nAttr.setKeyable(true);
+    nAttr.setAffectsAppearance(true);
+
+    x = nAttr.create("endTranslateX", "etx", MFnNumericData::kDouble, 0.0);
+    y = nAttr.create("endTranslateY", "ety", MFnNumericData::kDouble, 0.0);
+    z = nAttr.create("endTranslateZ", "etz", MFnNumericData::kDouble, 0.0);
+    s_endTranslate = nAttr.create("endTranslate", "et", x, y, z);
+    nAttr.setKeyable(true);
+    nAttr.setAffectsAppearance(true);
+
+    x = nAttr.create("endScaleX", "esx", MFnNumericData::kDouble, 1.0);
+    y = nAttr.create("endScaleY", "esy", MFnNumericData::kDouble, 1.0);
+    z = nAttr.create("endScaleZ", "esz", MFnNumericData::kDouble, 1.0);
+    s_endScale = nAttr.create("endScale", "es", x, y, z);
+    nAttr.setKeyable(true);
+    nAttr.setAffectsAppearance(true);
+
+    x = uAttr.create("rotationOffsetX", "rox", MFnUnitAttribute::kAngle, 0.0);
+    y = uAttr.create("rotationOffsetY", "roy", MFnUnitAttribute::kAngle, 0.0);
+    z = uAttr.create("rotationOffsetZ", "roz", MFnUnitAttribute::kAngle, 0.0);
+    s_rotationOffset = nAttr.create("rotationOffset", "ro", x, y, z);
+    nAttr.setKeyable(true);
+    nAttr.setAffectsAppearance(true);
 
     s_radius = nAttr.create("radius", "r", MFnNumericData::kDouble, 1.0); // TODO: Change to MFnUnitAttribute::kDistance
     nAttr.setKeyable(true);
     nAttr.setMin(0);
     nAttr.setAffectsAppearance(true);
-
-    s_angleLimitMatrix = mAttr.create("angleLimitMatrix", "bimtx");
-    mAttr.setKeyable(true);
-    mAttr.setAffectsAppearance(true);
 
     s_angleLimit = nAttr.create("angleLimit", "al", MFnNumericData::kDouble, 60.0);
     nAttr.setKeyable(true);
@@ -75,23 +158,29 @@ MStatus boneDynamicsVisualizer::initialize()
     nAttr.setMin(0);
     nAttr.setAffectsAppearance(true);
 
-    s_drawAngleLimit = nAttr.create("drawAngleLimit", "dal", MFnNumericData::kBoolean, true);
-    nAttr.setKeyable(true);
-    nAttr.setAffectsAppearance(true);
-
-    s_drawCollisionRadius = nAttr.create("drawCollisionRadius", "dcr", MFnNumericData::kBoolean, true);
-    nAttr.setKeyable(true);
-    nAttr.setAffectsAppearance(true);
-
-    addAttribute(s_endMatrix);
-    addAttribute(s_radius);
-    
-    addAttribute(s_angleLimitMatrix);
-    addAttribute(s_angleLimit);
-    addAttribute(s_angleConeSize);    
-
     addAttribute(s_drawAngleLimit);
     addAttribute(s_drawCollisionRadius);
+
+    addAttribute(s_enable);
+
+    addAttribute(s_outputRotate);
+
+    addAttribute(s_boneTranslate);
+    addAttribute(s_boneJointOrient);
+    addAttribute(s_boneParentMatrix);
+    addAttribute(s_boneParentInverseMatrix);
+    addAttribute(s_boneScale);
+    addAttribute(s_boneInverseScale);
+
+    addAttribute(s_endTranslate);
+    addAttribute(s_endScale);
+
+    addAttribute(s_rotationOffset);
+
+    addAttribute(s_radius);
+    
+    addAttribute(s_angleLimit);
+    addAttribute(s_angleConeSize);    
 
     return MS::kSuccess;
 }
@@ -137,25 +226,51 @@ MUserData* visualizerDrawOverride::prepareForDraw(
         return drawData;
     }
 
-    // radius sphere
+    // display switches
     const bool drawCollisionRadius = visualizerGeometry::getBoolPlug(node, boneDynamicsVisualizer::s_drawCollisionRadius, false);
-    const double radius = visualizerGeometry::getDoublePlug(node, boneDynamicsVisualizer::s_radius, 0.0);
-    const MMatrix endMatrix = visualizerGeometry::getMatrixPlug(node, boneDynamicsVisualizer::s_endMatrix, MMatrix::identity);
-    
-
-    drawData->radiusSphereLines.clear();
-    
-    if (drawCollisionRadius && radius > 0.0)
-    {
-        visualizerGeometry::appendRadiusSphere(drawData->radiusSphereLines, radius, endMatrix);
-    }
-
-    // angle limit cone
     const bool drawAngleLimit = visualizerGeometry::getBoolPlug(node, boneDynamicsVisualizer::s_drawAngleLimit, false);
+    
+    // get common data
+    const bool enable = visualizerGeometry::getBoolPlug(node, boneDynamicsVisualizer::s_enable, true);
+    const MVector outputRotate = visualizerGeometry::getVectorPlug(node, boneDynamicsVisualizer::s_outputRotate);
+
+    // build bone input data
+    boneDynamicsUtils::BoneInput boneInput;
+    
+    boneInput.boneTranslate = visualizerGeometry::getVectorPlug(node, boneDynamicsVisualizer::s_boneTranslate);
+    boneInput.boneJointOrient = visualizerGeometry::getVectorPlug(node, boneDynamicsVisualizer::s_boneJointOrient);
+    boneInput.boneParentMatrix = visualizerGeometry::getMatrixPlug(node, boneDynamicsVisualizer::s_boneParentMatrix);
+    boneInput.boneParentInverseMatrix = visualizerGeometry::getMatrixPlug(node, boneDynamicsVisualizer::s_boneParentInverseMatrix);
+    boneInput.endTranslate = visualizerGeometry::getVectorPlug(node, boneDynamicsVisualizer::s_endTranslate);
+    boneInput.rotationOffset = visualizerGeometry::getVectorPlug(node, boneDynamicsVisualizer::s_rotationOffset);
+    boneInput.boneScale = visualizerGeometry::getVectorPlug(node, boneDynamicsVisualizer::s_boneScale, MVector(1.0, 1.0, 1.0));
+    boneInput.boneInverseScale = visualizerGeometry::getVectorPlug(node, boneDynamicsVisualizer::s_boneInverseScale, MVector(1.0, 1.0, 1.0));
+    boneInput.endScale = visualizerGeometry::getVectorPlug(node, boneDynamicsVisualizer::s_endScale, MVector(1.0, 1.0, 1.0));
+    boneInput.radius = visualizerGeometry::getDoublePlug(node, boneDynamicsVisualizer::s_radius);
+
+    // build pose data
+    const boneDynamicsUtils::PoseData pose = boneDynamicsUtils::buildPoseData(boneInput);
+    //const double radius = pose.radius;
+
+    // build matrices for visualization
+    const MMatrix endMatrix = boneDynamicsUtils::buildSimulatedEndWorldMatrix(boneInput, outputRotate);
+    //const MMatrix angleLimitMatrix = boneDynamicsUtils::buildAngleLimitMatrix(boneInput, enable);
+    const MMatrix angleLimitMatrix = boneDynamicsUtils::resetMatrixScale(enable ? pose.boneInitialWorldMatrix : pose.boneInitialWorldMatrixExcludeRO);
+
+    // angle limit params
     const double angleLimitDegrees = visualizerGeometry::getDoublePlug(node, boneDynamicsVisualizer::s_angleLimit, 60.0);
-    const MMatrix angleLimitMatrix = visualizerGeometry::getMatrixPlug(node, boneDynamicsVisualizer::s_angleLimitMatrix, MMatrix::identity);
     const double angleConeSize = visualizerGeometry::getDoublePlug(node, boneDynamicsVisualizer::s_angleConeSize, 1.0);
 
+    // -------------------------------------------------------
+    // draw
+    
+    drawData->radiusSphereLines.clear();
+    
+    if (drawCollisionRadius && pose.radius > 0.0)
+    {
+        visualizerGeometry::appendRadiusSphere(drawData->radiusSphereLines, pose.radius, endMatrix);
+    }
+    
     drawData->angleLimitLines.clear();
 
     if (drawAngleLimit && angleLimitDegrees > 0.0)

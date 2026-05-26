@@ -3,6 +3,8 @@
 // Disabled min/max macros in Windows API
 #define NOMINMAX  
 
+#include "boneDynamicsUtils.h"
+
 #include <maya/MPxNode.h>
 #include <maya/MTypeId.h>
 #include <maya/MMatrix.h>
@@ -85,6 +87,7 @@ public:
     static MObject s_sphereColMtx;      // sphereCollider matrix
     static MObject s_sphereColRad;      // sphereCollider radius
 
+    // (legacy) Using two matrices
     static MObject s_capsuleCollider;   // capsuleCollider array
     static MObject s_capsuleColMtxA;    // capsuleCollider matrix A
     static MObject s_capsuleColMtxB;    // capsuleCollider matrix B
@@ -106,38 +109,18 @@ public:
     
     // output
     static MObject s_outputRotate;       // output euler rotation
-    static MObject s_outputEndMatrix;    // output end world matrix
-
-    // visualization output
-    static MObject s_visualizeCollisionRadius;   // scaled radius for visualization
-    static MObject s_visualizeAngleLimitMatrix;  // matrix to place the cone
 
 private:
     void angleLimit(const MVector& pivot, const MVector& a, MVector& b, const double limitAngle);
     void distanceConstraint(const MVector& pivot, MVector& point, double distance);
     void getClosestPoint(const MObject& mesh, const MPoint& position, MPoint& closestPoint, MVector& closestNormal);
     
-    static const MEulerRotation::RotationOrder ROTATION_ORDER = MEulerRotation::RotationOrder::kXYZ;
-
-    struct InitialPoseData
+    struct InitialPoseData : public boneDynamicsUtils::PoseData
     {
+        // Inherits from boneDynamicsUtils::PoseData
+
         MMatrix offsetMatrix;
         double offsetMatrixWeight;
-        
-        MEulerRotation rotationOffsetEuler; // used for reset and initialization
-        MMatrix roMatrix;
-        
-        MVector boneWorldTranslate;
-        MMatrix boneInitialWorldMatrixExcludeRO;
-        MMatrix boneInitialWorldMatrix;
-        MMatrix boneInitialParentInverseMatrix;
-        
-        MVector endWorldTranslate;
-        MMatrix initialEndWorldMatrixExcludeRO; // used for disabled
-        MMatrix initialEndWorldMatrix; // used for reset and initialization
-        
-        double radius;
-        double distance;
     };
 
     InitialPoseData buildInitialPoseData(MDataBlock& data) const;
@@ -162,16 +145,14 @@ private:
     };
 
     DynamicsParameters getDynamicsParameters(MDataBlock& data) const;
-
-    MStatus computeSimulation(MDataBlock& data);
-    MStatus computeVisualization(MDataBlock& data);
-    void setVisualizationOutputs(MDataBlock& data, const InitialPoseData& pose, const bool enable = true);
     
+    // simulate state
     bool m_init;
     MMatrix m_prevOffsetMatrix;
     MVector m_position;
     MVector m_velocity;
 
+    // turbulence state
     int m_lastSeed;
     int m_lastFrame;
     std::uint32_t m_rngState[4];

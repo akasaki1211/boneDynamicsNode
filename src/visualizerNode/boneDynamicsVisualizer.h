@@ -23,18 +23,37 @@ public:
     static MString s_drawDbClassification;
     static MString s_drawRegistrantId;
 
-    // radius sphere visualize
-    static MObject s_endMatrix;
-    static MObject s_radius;
-    
-    // angle limit visualize
-    static MObject s_angleLimitMatrix;
-    static MObject s_angleLimit;
-    static MObject s_angleConeSize;
-    
     // display switches
     static MObject s_drawAngleLimit;
     static MObject s_drawCollisionRadius;
+
+    // simulate enable
+    static MObject s_enable;
+
+    // simulated rotate
+    static MObject s_outputRotate;
+
+    // bone input
+    static MObject s_boneTranslate;
+    static MObject s_boneJointOrient;
+    static MObject s_boneParentMatrix;
+    static MObject s_boneParentInverseMatrix; // This value is not used, but it is required as an argument for buildPoseData.
+    static MObject s_boneScale;
+    static MObject s_boneInverseScale;
+    
+    // end inputs
+    static MObject s_endTranslate;
+    static MObject s_endScale;
+
+    // rotation offset input
+    static MObject s_rotationOffset;
+
+    // radius input (not scaled)
+    static MObject s_radius;
+    
+    // angle limit
+    static MObject s_angleLimit;
+    static MObject s_angleConeSize;
 };
 
 class visualizerDrawOverride : public MHWRender::MPxDrawOverride

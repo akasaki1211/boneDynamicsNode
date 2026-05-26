@@ -1,4 +1,5 @@
 #include "boneDynamicsNode.h"
+#include "boneDynamicsUtils.h"
 #include "nodeIds.h"
 #include "mathUtils.h"
 
@@ -17,16 +18,6 @@
 
 namespace
 {
-    MMatrix resetScaleMatrix(MMatrix originalMatrix)
-    {
-        // override scale to 1 on the given matrix
-        MTransformationMatrix transform(originalMatrix);
-        double newScale[3] = {1.0, 1.0, 1.0};
-        transform.setScale(newScale, MSpace::kTransform);
-        MMatrix scaleResetMatrix = transform.asMatrix();
-        return scaleResetMatrix;
-    }
-
     /*double getFPS()
     {
         float fps = 24.0f;
@@ -116,10 +107,6 @@ MObject boneDynamicsNode::s_meshCollider;
 MObject boneDynamicsNode::s_meshColCutoff;
 
 MObject boneDynamicsNode::s_outputRotate;
-MObject boneDynamicsNode::s_outputEndMatrix;
-
-MObject boneDynamicsNode::s_visualizeCollisionRadius;
-MObject boneDynamicsNode::s_visualizeAngleLimitMatrix;
 
 boneDynamicsNode::boneDynamicsNode() : m_init(true), m_lastSeed(-1), m_lastFrame(-1) {
     m_rngState[0] = 0;
@@ -158,7 +145,6 @@ void boneDynamicsNode::getCacheSetup(const MEvaluationNode& evalNode, MNodeCache
 
     monitoredAttributes.append(s_enable);
 }
-
 
 MStatus boneDynamicsNode::initialize()
 {
@@ -427,20 +413,6 @@ MStatus boneDynamicsNode::initialize()
     nAttr.setStorable(false);
     nAttr.setWritable(false);
 
-    s_outputEndMatrix = mAttr.create("outputEndMatrix", "oemtx");
-    mAttr.setWritable(false);
-    mAttr.setStorable(false);
-
-    // visualization output attributes
-    s_visualizeCollisionRadius = nAttr.create("visualizeCollisionRadius", "vcr", MFnNumericData::kDouble, 0.0);
-    nAttr.setWritable(false);
-    nAttr.setStorable(false);
-    nAttr.setMin(0.0);
-
-    s_visualizeAngleLimitMatrix = mAttr.create("visualizeAngleLimitMatrix", "valm" );
-    mAttr.setWritable(false);
-    mAttr.setStorable(false);
-
     // addAttribute
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_enable));
 
@@ -497,17 +469,8 @@ MStatus boneDynamicsNode::initialize()
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_meshColCutoff));
 
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_outputRotate));
-    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_outputEndMatrix));
-
-    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_visualizeCollisionRadius));
-    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_visualizeAngleLimitMatrix));
-
+    
     // attributeAffects
-    const MObject simulationOutputs[] = {
-        s_outputRotate,
-        s_outputEndMatrix
-    };
-
     const MObject simulationInputs[] = {
         s_enable,
 
@@ -576,22 +539,8 @@ MStatus boneDynamicsNode::initialize()
 
     for (const MObject& input : simulationInputs)
     {
-        for (const MObject& output : simulationOutputs)
-        {
-            CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(input, output));
-        }
+        CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(input, s_outputRotate));
     }
-
-    // visualization affects
-    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_radius, s_visualizeCollisionRadius));
-    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_boneParentMatrix, s_visualizeCollisionRadius));
-    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_boneInverseScale, s_visualizeCollisionRadius));
-    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_endScale, s_visualizeCollisionRadius));
-
-    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_boneParentMatrix, s_visualizeAngleLimitMatrix));
-    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_boneTranslate, s_visualizeAngleLimitMatrix));
-    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_boneJointOrient, s_visualizeAngleLimitMatrix));
-    CHECK_MSTATUS_AND_RETURN_IT(attributeAffects(s_rotationOffset, s_visualizeAngleLimitMatrix));
 
     return MS::kSuccess;
 }
@@ -631,81 +580,39 @@ void boneDynamicsNode::getClosestPoint(const MObject& mesh, const MPoint& point,
 
 boneDynamicsNode::InitialPoseData boneDynamicsNode::buildInitialPoseData(MDataBlock& data) const
 {
-    InitialPoseData pose;
+    InitialPoseData initialPose;
 
     // offset matrix inputs
-    pose.offsetMatrix = data.inputValue(s_offsetMatrix).asMatrix();
-    pose.offsetMatrixWeight = data.inputValue(s_offsetMatrixWeight).asDouble();
+    initialPose.offsetMatrix = data.inputValue(s_offsetMatrix).asMatrix();
+    initialPose.offsetMatrixWeight = data.inputValue(s_offsetMatrixWeight).asDouble();
 
-    // bone inputs
-    const MVector& boneTranslate = data.inputValue(s_boneTranslate).asVector();
-    const MVector& boneJointOrient = data.inputValue(s_boneJointOrient).asVector();
-    const MMatrix& boneParentMatrix = data.inputValue(s_boneParentMatrix).asMatrix();
-    const MMatrix& boneParentInverseMatrix = data.inputValue(s_boneParentInverseMatrix).asMatrix();
-    const MVector& boneScale = data.inputValue(s_boneScale).asVector();
-    const MVector& boneInverseScaleInput = data.inputValue(s_boneInverseScale).asVector();
+    boneDynamicsUtils::BoneInput input;
+
+    // bone input
+    input.boneTranslate = data.inputValue(s_boneTranslate).asVector();
+    input.boneJointOrient = data.inputValue(s_boneJointOrient).asVector();
+    input.boneParentMatrix = data.inputValue(s_boneParentMatrix).asMatrix();
+    input.boneParentInverseMatrix = data.inputValue(s_boneParentInverseMatrix).asMatrix();
+    input.boneScale = data.inputValue(s_boneScale).asVector();
+    input.boneInverseScale = data.inputValue(s_boneInverseScale).asVector();
     
-    // end inputs
-    const MVector& endTranslate = data.inputValue(s_endTranslate).asVector();
-    const MVector& endScale = data.inputValue(s_endScale).asVector();
+    // end input
+    input.endTranslate = data.inputValue(s_endTranslate).asVector();
+    input.endScale = data.inputValue(s_endScale).asVector();
 
-    // rotation offset
-    const MVector& rotationOffset = data.inputValue(s_rotationOffset).asVector();
+    // rotation offset input
+    input.rotationOffset = data.inputValue(s_rotationOffset).asVector();
 
-    // rotation offset matrix
-    pose.rotationOffsetEuler = MEulerRotation(rotationOffset, ROTATION_ORDER);
-    pose.roMatrix = pose.rotationOffsetEuler.asMatrix();
+    // radius input
+    input.radius = data.inputValue(s_radius).asDouble();
 
-    // bone matrix
-    MTransformationMatrix boneTransformationMatrix;
-    boneTransformationMatrix.setTranslation(boneTranslate, MSpace::kWorld);
-    const MMatrix boneMatrix = boneTransformationMatrix.asMatrix();
-    
-    // bone world position
-    const MPoint boneWorldTranslatePoint = MPoint(boneTranslate) * boneParentMatrix;
-    pose.boneWorldTranslate = MVector(boneWorldTranslatePoint);
+    // build pose data
+    const boneDynamicsUtils::PoseData poseData = boneDynamicsUtils::buildPoseData(input);
 
-    // bone initial world matrix
-    const MMatrix joMatrix = MEulerRotation(boneJointOrient, ROTATION_ORDER).asMatrix();
-    pose.boneInitialWorldMatrixExcludeRO = joMatrix * boneMatrix * boneParentMatrix;
-    pose.boneInitialWorldMatrix = pose.roMatrix * pose.boneInitialWorldMatrixExcludeRO;
+    // cast to base PoseData
+    static_cast<boneDynamicsUtils::PoseData&>(initialPose) = poseData;
 
-    // bone initial world inverse matrix
-    const MMatrix roInverseMatrix = !pose.roMatrix.isEquivalent(MMatrix::identity) ? pose.roMatrix.inverse() : MMatrix::identity;
-    const MMatrix joInverseMatrix = !joMatrix.isEquivalent(MMatrix::identity) ? joMatrix.inverse() : MMatrix::identity;
-    pose.boneInitialParentInverseMatrix = boneParentInverseMatrix * joInverseMatrix * roInverseMatrix;
-
-    // end world position
-    const MVector boneInverseScale(
-        1.0 / boneInverseScaleInput.x, 
-        1.0 / boneInverseScaleInput.y, 
-        1.0 / boneInverseScaleInput.z
-    );
-    const MPoint scaledEndTranslate(
-        endTranslate.x * boneScale.x * boneInverseScale.x, 
-        endTranslate.y * boneScale.y * boneInverseScale.y, 
-        endTranslate.z * boneScale.z * boneInverseScale.z
-    );
-    const MPoint endWorldTranslatePoint = scaledEndTranslate * pose.boneInitialWorldMatrix;
-    pose.endWorldTranslate = MVector(endWorldTranslatePoint);
-
-    // end init world matrix
-    MTransformationMatrix endTransformationMatrix;
-    endTransformationMatrix.setTranslation(scaledEndTranslate, MSpace::kWorld);
-    pose.initialEndWorldMatrix = resetScaleMatrix(endTransformationMatrix.asMatrix() * pose.boneInitialWorldMatrix);
-    pose.initialEndWorldMatrixExcludeRO = resetScaleMatrix(endTransformationMatrix.asMatrix() * pose.boneInitialWorldMatrixExcludeRO);
-
-    // radius
-    double radius = data.inputValue(s_radius).asDouble();
-    const MTransformationMatrix boneParentTransformationMatrix(boneParentMatrix);
-    double boneParentScale[3];
-    boneParentTransformationMatrix.getScale(boneParentScale, MSpace::kWorld);
-    pose.radius = radius * endScale.z * boneInverseScale.z * boneParentScale[2]; // Specified by scale Z
-
-    // bone length
-    pose.distance = (pose.endWorldTranslate - pose.boneWorldTranslate).length();
-    
-    return pose;
+    return initialPose;
 }
 
 boneDynamicsNode::DynamicsParameters boneDynamicsNode::getDynamicsParameters(MDataBlock& data) const
@@ -731,12 +638,18 @@ boneDynamicsNode::DynamicsParameters boneDynamicsNode::getDynamicsParameters(MDa
     return params;
 }
 
-MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
+MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
 {
+    const MPlug computePlug = plug.isChild() ? plug.parent() : plug;
+    
+    if (computePlug != s_outputRotate)
+    {
+        return MS::kUnknownParameter;
+    }
+
     // output data handles
     MDataHandle& outputRotateHandle = data.outputValue(s_outputRotate);
-    MDataHandle& outputEndMatrixHandle = data.outputValue(s_outputEndMatrix);
-
+    
     // build initial pose data
     InitialPoseData initialPose = buildInitialPoseData(data);
     
@@ -747,14 +660,8 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
         outputRotateHandle.set3Double(0.0, 0.0, 0.0);
         outputRotateHandle.setClean();
 
-        outputEndMatrixHandle.setMMatrix(initialPose.initialEndWorldMatrixExcludeRO);
-        outputEndMatrixHandle.setClean();
-
         return MS::kSuccess;
     }
-
-    // set visualization output values
-    setVisualizationOutputs(data, initialPose, enable);
 
     // dynamic parameters
     DynamicsParameters dynamicsParams = getDynamicsParameters(data);
@@ -787,9 +694,6 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
             initialPose.rotationOffsetEuler.z
         );
         outputRotateHandle.setClean();
-
-        outputEndMatrixHandle.setMMatrix(initialPose.initialEndWorldMatrix);
-        outputEndMatrixHandle.setClean();
         
         return MS::kSuccess;
     }
@@ -1159,49 +1063,5 @@ MStatus boneDynamicsNode::computeSimulation(MDataBlock& data)
     outputRotateHandle.set3Double(rot.x, rot.y, rot.z);
     outputRotateHandle.setClean();
 
-    // output end world matrix
-    MTransformationMatrix outEndTransformationMatrix;
-    outEndTransformationMatrix.setTranslation(targetVec, MSpace::kWorld);
-
-    outputEndMatrixHandle.setMMatrix(resetScaleMatrix(outEndTransformationMatrix.asMatrix() * initialPose.boneInitialWorldMatrix));
-    outputEndMatrixHandle.setClean();    
-
     return MS::kSuccess;
-}
-
-MStatus boneDynamicsNode::computeVisualization(MDataBlock& data)
-{
-    InitialPoseData initialPose = buildInitialPoseData(data);
-    const bool enable = data.inputValue(s_enable).asBool();
-    setVisualizationOutputs(data, initialPose, enable);
-    return MS::kSuccess;
-}
-
-void boneDynamicsNode::setVisualizationOutputs(MDataBlock& data, const InitialPoseData& pose, const bool enable)
-{
-    MDataHandle& collisionRadiusHandle = data.outputValue(s_visualizeCollisionRadius);
-    collisionRadiusHandle.setDouble(pose.radius);
-    collisionRadiusHandle.setClean();
-
-    MDataHandle& angleLimitMatrixHandle = data.outputValue(s_visualizeAngleLimitMatrix);
-    angleLimitMatrixHandle.setMMatrix(resetScaleMatrix(enable ? pose.boneInitialWorldMatrix : pose.boneInitialWorldMatrixExcludeRO));
-    angleLimitMatrixHandle.setClean();
-}
-
-MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
-{
-    const MPlug computePlug = plug.isChild() ? plug.parent() : plug;
-    
-    if (computePlug == s_outputRotate || computePlug == s_outputEndMatrix)
-    {
-        return computeSimulation(data);
-    }
-    else if (computePlug == s_visualizeCollisionRadius || computePlug == s_visualizeAngleLimitMatrix)
-    {
-        return computeVisualization(data);
-    }
-    else
-    {
-        return MS::kUnknownParameter;
-    }
 }
