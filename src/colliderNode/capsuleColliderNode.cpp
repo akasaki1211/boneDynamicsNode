@@ -3,6 +3,7 @@
 #include "../nodeIds.h"
 
 #include <maya/MFnUnitAttribute.h>
+#include <maya/MFnNumericAttribute.h>
 #include <maya/MDagPath.h>
 #include <maya/MDrawContext.h>
 #include <maya/MViewport2Renderer.h>
@@ -15,6 +16,8 @@ MString capsuleColliderNode::s_drawRegistrantId("boneDynamicsNodePlugin");
 MObject capsuleColliderNode::s_radiusA;
 MObject capsuleColliderNode::s_radiusB;
 MObject capsuleColliderNode::s_height;
+
+MObject capsuleColliderNode::s_segments;
 
 capsuleColliderNode::capsuleColliderNode() {}
 capsuleColliderNode::~capsuleColliderNode() {}
@@ -55,6 +58,7 @@ void* capsuleColliderNode::creator()
 MStatus capsuleColliderNode::initialize()
 {
     MFnUnitAttribute uAttr;
+    MFnNumericAttribute nAttr;
     
     s_radiusA = uAttr.create("radiusA", "ra", MFnUnitAttribute::kDistance, 1.0);
     uAttr.setKeyable(false);
@@ -74,9 +78,17 @@ MStatus capsuleColliderNode::initialize()
     uAttr.setMin(0);
     uAttr.setAffectsAppearance(true);
 
+    s_segments = nAttr.create("segments", "s", MFnNumericData::kInt, 4);
+    nAttr.setKeyable(false);
+    nAttr.setChannelBox(true);
+    nAttr.setMin(1);
+    nAttr.setMax(16);
+    nAttr.setAffectsAppearance(true);
+
     addAttribute(s_radiusA);
     addAttribute(s_radiusB);
     addAttribute(s_height);
+    addAttribute(s_segments);
     
     return MS::kSuccess;
 }
@@ -122,6 +134,20 @@ void capsuleColliderDrawOverride::getCapsuleParameters(const MDagPath& objPath, 
     height = colliderGeometry::getDistancePlugAsCentimeters(node, capsuleColliderNode::s_height, 2.0);
 }
 
+int capsuleColliderDrawOverride::getSegments(const MDagPath& objPath) const
+{
+    MStatus status;
+    const MObject node = objPath.node(&status);
+    if (!status)
+    {
+        return 4;
+    }
+
+    const int segments = colliderGeometry::getSegments(node, capsuleColliderNode::s_segments, 4);
+
+    return segments;
+}
+
 MUserData* capsuleColliderDrawOverride::prepareForDraw(
     const MDagPath& objPath,
     const MDagPath& cameraPath,
@@ -139,10 +165,11 @@ MUserData* capsuleColliderDrawOverride::prepareForDraw(
     double radiusB = 1.0;
     double height = 2.0;
     getCapsuleParameters(objPath, radiusA, radiusB, height);
+    const int segments = getSegments(objPath) * 4;
 
     drawData->lineList.clear();
 
-    colliderGeometry::appendWireCapsule(drawData->lineList, radiusA, radiusB, height);
+    colliderGeometry::appendWireCapsule(drawData->lineList, radiusA, radiusB, height, segments);
 
     drawData->color = MHWRender::MGeometryUtilities::wireframeColor(objPath);
     drawData->depthPriority = MHWRender::MRenderItem::sDormantWireDepthPriority;

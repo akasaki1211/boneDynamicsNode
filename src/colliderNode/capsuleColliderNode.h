@@ -30,6 +30,8 @@ public:
     static MObject s_radiusA;
     static MObject s_radiusB;
     static MObject s_height;
+
+    static MObject s_segments; // Use it multiply by 4
 };
 
 class capsuleColliderDrawOverride : public MHWRender::MPxDrawOverride
@@ -70,4 +72,5 @@ public:
 private:
     explicit capsuleColliderDrawOverride(const MObject& obj);
     void getCapsuleParameters(const MDagPath& objPath, double& radiusA, double& radiusB, double& height) const;
+    int getSegments(const MDagPath& objPath) const;
 };

@@ -28,6 +28,8 @@ public:
     static MString s_drawRegistrantId;
 
     static MObject s_radius;
+
+    static MObject s_segments; // Use it multiply by 4
 };
 
 class sphereColliderDrawOverride : public MHWRender::MPxDrawOverride
@@ -69,4 +71,5 @@ public:
 private:
     explicit sphereColliderDrawOverride(const MObject& obj);
     double getRadius(const MDagPath& objPath) const;
+    int getSegments(const MDagPath& objPath) const;
 };
