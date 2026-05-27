@@ -650,19 +650,19 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     // output data handles
     MDataHandle& outputRotateHandle = data.outputValue(s_outputRotate);
     
-    // build initial pose data
-    InitialPoseData initialPose = buildInitialPoseData(data);
-    
     // check enable
     const bool enable = data.inputValue(s_enable).asBool();
     if (!enable)
     {
         outputRotateHandle.set3Double(0.0, 0.0, 0.0);
-        outputRotateHandle.setClean();
+        data.setClean(plug);
 
         return MS::kSuccess;
     }
 
+    // build initial pose data
+    InitialPoseData initialPose = buildInitialPoseData(data);
+    
     // dynamic parameters
     DynamicsParameters dynamicsParams = getDynamicsParameters(data);
 
@@ -693,7 +693,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
             initialPose.rotationOffsetEuler.y, 
             initialPose.rotationOffsetEuler.z
         );
-        outputRotateHandle.setClean();
+        data.setClean(plug);
         
         return MS::kSuccess;
     }
@@ -1061,7 +1061,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     const MEulerRotation rot = offseted_quat.asEulerRotation();
     
     outputRotateHandle.set3Double(rot.x, rot.y, rot.z);
-    outputRotateHandle.setClean();
+    data.setClean(plug);
 
     return MS::kSuccess;
 }
