@@ -3,6 +3,7 @@
 #include "../nodeIds.h"
 
 #include <maya/MFnUnitAttribute.h>
+#include <maya/MFnNumericAttribute.h>
 #include <maya/MDagPath.h>
 #include <maya/MDrawContext.h>
 #include <maya/MViewport2Renderer.h>
@@ -13,6 +14,8 @@ MString sphereColliderNode::s_drawDbClassification("drawdb/geometry/boneDynamics
 MString sphereColliderNode::s_drawRegistrantId("boneDynamicsNodePlugin");
 
 MObject sphereColliderNode::s_radius;
+
+MObject sphereColliderNode::s_segments;
 
 sphereColliderNode::sphereColliderNode() {}
 sphereColliderNode::~sphereColliderNode() {}
@@ -47,6 +50,7 @@ void* sphereColliderNode::creator()
 MStatus sphereColliderNode::initialize()
 {
     MFnUnitAttribute uAttr;
+    MFnNumericAttribute nAttr;
 
     s_radius = uAttr.create("radius", "r", MFnUnitAttribute::kDistance, 1.0);
     uAttr.setKeyable(false);
@@ -54,7 +58,15 @@ MStatus sphereColliderNode::initialize()
     uAttr.setMin(0);
     uAttr.setAffectsAppearance(true);
 
+    s_segments = nAttr.create("segments", "s", MFnNumericData::kInt, 4);
+    nAttr.setKeyable(false);
+    nAttr.setChannelBox(true);
+    nAttr.setMin(1);
+    nAttr.setMax(16);
+    nAttr.setAffectsAppearance(true);
+
     addAttribute(s_radius);
+    addAttribute(s_segments);
 
     return MS::kSuccess;
 }
@@ -99,6 +111,21 @@ double sphereColliderDrawOverride::getRadius(const MDagPath& objPath) const
     return radius;
 }
 
+int sphereColliderDrawOverride::getSegments(const MDagPath& objPath) const
+{
+    MStatus status;
+    const MObject node = objPath.node(&status);
+
+    if (!status)
+    {
+        return 4;
+    }
+
+    const int segments = colliderGeometry::getSegments(node, sphereColliderNode::s_segments, 4);
+
+    return segments;
+}
+
 MUserData* sphereColliderDrawOverride::prepareForDraw(
     const MDagPath& objPath,
     const MDagPath& cameraPath,
@@ -113,10 +140,11 @@ MUserData* sphereColliderDrawOverride::prepareForDraw(
     }
 
     const double radius = getRadius(objPath);
+    const int segments = getSegments(objPath) * 4;
 
     drawData->lineList.clear();
 
-    colliderGeometry::appendWireSphere(drawData->lineList, radius);
+    colliderGeometry::appendWireSphere(drawData->lineList, radius, segments);
 
     drawData->color = MHWRender::MGeometryUtilities::wireframeColor(objPath);
     drawData->depthPriority = MHWRender::MRenderItem::sDormantWireDepthPriority;

@@ -25,6 +25,7 @@ namespace colliderGeometry
     };
 
     double getDistancePlugAsCentimeters(const MObject& node, const MObject& attribute, double defaultValue);
+    int getSegments(const MObject& node, const MObject& attribute, int defaultValue);
 
     MBoundingBox makeSphereBoundingBox(double radius);
     MBoundingBox makeCapsuleBoundingBox(double radiusA, double radiusB, double height);

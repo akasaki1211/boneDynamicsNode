@@ -33,6 +33,24 @@ namespace colliderGeometry
         return value.asCentimeters();
     }
 
+    int getSegments(const MObject& node, const MObject& attribute, int defaultValue)
+    {
+        MPlug plug(node, attribute);
+        if (plug.isNull())
+        {
+            return defaultValue;
+        }
+
+        int value = defaultValue;
+        MStatus status = plug.getValue(value);
+        if (!status)
+        {
+            return defaultValue;
+        }
+
+        return value;
+    }
+
     MBoundingBox makeSphereBoundingBox(double radius)
     {
         radius = std::max(0.0, radius);
