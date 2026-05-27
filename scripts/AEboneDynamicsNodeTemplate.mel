@@ -64,6 +64,7 @@ global proc AEboneDynamicsNodeTemplate(string $nodeName)
                 editorTemplate -addControl "groundHeight";
                 editorTemplate -addControl "sphereCollider";
                 editorTemplate -addControl "capsuleCollider";
+                editorTemplate -addControl "capsuleColliderInput";
                 editorTemplate -addControl "infinitePlaneCollider";
                 editorTemplate -label "Mesh Collider (*Experimental)" -addControl "meshCollider";
                 editorTemplate -addControl "meshColCutoff";
