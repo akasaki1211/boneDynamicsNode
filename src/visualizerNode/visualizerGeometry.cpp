@@ -77,6 +77,36 @@ namespace visualizerGeometry
         return value;
     }
 
+    MVector getVectorPlug(const MObject& node, const MObject& attribute, const MVector& defaultValue)
+    {
+        MPlug plug(node, attribute);
+        if (plug.isNull() || plug.numChildren() < 3)
+        {
+            return defaultValue;
+        }
+
+        double x = defaultValue.x;
+        double y = defaultValue.y;
+        double z = defaultValue.z;
+
+        if (!plug.child(0).getValue(x))
+        {
+            x = defaultValue.x;
+        }
+
+        if (!plug.child(1).getValue(y))
+        {
+            y = defaultValue.y;
+        }
+
+        if (!plug.child(2).getValue(z))
+        {
+            z = defaultValue.z;
+        }
+
+        return MVector(x, y, z);
+    }
+
     MMatrix getMatrixPlug(const MObject& node, const MObject& attribute, const MMatrix& defaultValue)
     {
         MPlug plug(node, attribute);
