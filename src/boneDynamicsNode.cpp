@@ -33,6 +33,135 @@ namespace
         }
         return fps;
     }*/
+
+    void angleLimit(const MVector& pivot, const MVector& a, MVector& b, const double limitAngle)
+    {
+        // update b
+
+        const MVector initVec = a - pivot;
+        const MVector currentVec = b - pivot;
+        const MQuaternion quat(initVec, currentVec);
+
+        MVector axis;
+        double currentAngle;
+        quat.getAxisAngle(axis, currentAngle);
+
+        if (currentAngle > limitAngle)
+        {
+            const double rotateAngle = limitAngle - currentAngle;
+            const MVector axisNormal = axis.normal();
+
+            const MVector rotatedVec = currentVec * cos(rotateAngle) + (axisNormal ^ currentVec) * sin(rotateAngle);
+
+            b = pivot + rotatedVec;
+        }
+    }
+
+    void distanceConstraint(const MVector& pivot, MVector& point, double distance)
+    {
+        // update point
+        point = pivot + ((point - pivot).normal() * distance);
+    }
+
+    struct SphereColliderData
+    {
+        MVector center;
+        double radius = 0.0;
+    };
+
+    struct CapsuleColliderData
+    {
+        MVector pointA;
+        MVector pointB;
+        double radiusA = 0.0;
+        double radiusB = 0.0;
+    };
+
+    struct InfinitePlaneColliderData
+    {
+        MVector point;
+        MVector normal;
+    };
+
+    void solveSphereCollision(MVector& position, const SphereColliderData& sphereCol, double radius)
+    {
+        MVector v = position - sphereCol.center;
+        double r = sphereCol.radius + radius;
+        if (v * v < r * r)
+        {
+            position = sphereCol.center + (v.normal() * r);
+        }
+    }
+
+    void solveCapsuleCollision(MVector& position, const CapsuleColliderData& capsuleCol, double radius)
+    {
+        const MVector ab = capsuleCol.pointB - capsuleCol.pointA;
+        const double h = ab.length();
+        const MVector abNorm = ab / h;
+
+        const double t = abNorm * (position - capsuleCol.pointA);
+        const double ratio = std::max(0.0, std::min(t / h, 1.0));
+
+        const MVector closestPoint = capsuleCol.pointA + abNorm * (h * ratio);
+        
+        const MVector v = position - closestPoint;
+        const double r = radius + (capsuleCol.radiusA * (1.0 - ratio) + capsuleCol.radiusB * ratio);
+        if (v * v < r * r)
+        {
+            position = closestPoint + v.normal() * r;
+        }
+    }
+
+    void solveInfinitePlaneCollision(MVector& position, const InfinitePlaneColliderData& iPlaneCol, double radius)
+    {
+        const double distancePointPlane = iPlaneCol.normal * (position - iPlaneCol.point);
+        if (distancePointPlane - radius < 0.0)
+        {
+            position = position - (iPlaneCol.normal * (distancePointPlane - radius));
+        }
+    }
+
+    void solveGroundCollision(MVector& position, double groundHeight, double radius)
+    {
+        const double collisionHeight = groundHeight + radius;
+        position[1] = position[1] < collisionHeight ? collisionHeight : position[1]; // Y-Up only
+    }
+
+    void getClosestPoint(const MObject& mesh, const MPoint& point, MPoint& closestPoint, MVector& closestNormal)
+    {
+        // update closestPoint and closestNormal
+
+        MFnMesh fnMesh(mesh);
+        fnMesh.getClosestPointAndNormal(point, closestPoint, closestNormal, MSpace::kWorld);
+    }
+
+    void solveMeshCollision(MVector& position, const MObject& meshCol, double radius, double cutoff)
+    {
+        // Get the closest point and closest normal on a mesh
+        MPoint closestPoint;
+        MVector closestNormal;
+        getClosestPoint(meshCol, MPoint(position), closestPoint, closestNormal);
+        closestNormal = closestNormal.normal();
+
+        // Get the vector from the closest point to the current point
+        const MVector contactVec = position - MVector(closestPoint);
+
+        // Get the distance to the surface
+        const double distanceContactPoint = closestNormal * contactVec;
+        
+        // If it is penetrated in the surface, it will be pushed out
+        if (distanceContactPoint - radius < 0.0)
+        {
+            // If it is completely penetrated, it uses the closest normal to push out, if it is only in contact, it uses the contactVec to push out.
+            MVector pushOutPos = MVector(closestPoint) + (distanceContactPoint < 0 ? closestNormal : contactVec.normal()) * radius;
+            
+            // If the position after push out is within meshColCutoff from the current position, it will be pushed out.
+            if ((position - pushOutPos).length() < cutoff)
+            {
+                position = pushOutPos;
+            }
+        }
+    }
 }
 
 MTypeId boneDynamicsNode::s_id(nodeIds::boneDynamicsNode);
@@ -545,39 +674,6 @@ MStatus boneDynamicsNode::initialize()
     return MS::kSuccess;
 }
 
-void boneDynamicsNode::angleLimit(const MVector& pivot, const MVector& a, MVector& b, const double limitAngle)
-{
-    const MVector initVec = a - pivot;
-    const MVector currentVec = b - pivot;
-    const MQuaternion quat(initVec, currentVec);
-
-    MVector axis;
-    double currentAngle;
-    quat.getAxisAngle(axis, currentAngle);
-
-    if (currentAngle > limitAngle)
-    {
-        const double rotateAngle = limitAngle - currentAngle;
-        const MVector axisNormal = axis.normal();
-
-        const MVector rotatedVec = currentVec * cos(rotateAngle) + (axisNormal ^ currentVec) * sin(rotateAngle);
-
-        b = pivot + rotatedVec;
-    }
-}
-
-void boneDynamicsNode::distanceConstraint(const MVector& pivot, MVector& point, double distance)
-{
-    // update point
-    point = pivot + ((point - pivot).normal() * distance);
-}
-
-void boneDynamicsNode::getClosestPoint(const MObject& mesh, const MPoint& point, MPoint& closestPoint, MVector& closestNormal)
-{
-    MFnMesh fnMesh(mesh);
-    fnMesh.getClosestPointAndNormal(point, closestPoint, closestNormal, MSpace::kWorld);
-}
-
 boneDynamicsNode::InitialPoseData boneDynamicsNode::buildInitialPoseData(MDataBlock& data) const
 {
     InitialPoseData initialPose;
@@ -842,36 +938,33 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     MVector iPlaneCol_n;
     MObject meshCol;
 
-    MVector v;
-    double r;
 
     const long iter = data.inputValue(s_iterations).asLong();
 
-    for (int i = 0; i < iter; i++)
+    for (int i = 0; i < iter; ++i)
     {
         // distance constraint
         distanceConstraint(initialPose.boneWorldTranslate, nextPosition, initialPose.distance);
         
         //sphere collision
-        for (unsigned int i = 0; i < scCount; i++) {
-            sphereColArrayHandle.jumpToArrayElement(i);
+        for (unsigned int scIdx = 0; scIdx < scCount; ++scIdx) {
+            sphereColArrayHandle.jumpToArrayElement(scIdx);
             MDataHandle& sphereCollider = sphereColArrayHandle.inputValue();
             sphereCol_m = sphereCollider.child(s_sphereColMtx).asMatrix();
             sphereCol_p = sphereCol_m.getTranslation(MSpace::kWorld);
             sphereCol_m.getScale(sphereCol_s, MSpace::kWorld);
             sphereCol_r = sphereCollider.child(s_sphereColRad).asDouble() * sphereCol_s[2];
-                
-            v = nextPosition - sphereCol_p;
-            r = sphereCol_r + initialPose.radius;
-            if (v * v < r * r)
-            {
-                nextPosition = sphereCol_p + (v.normal() * r);
-            };
+            
+            SphereColliderData sphereCol;
+            sphereCol.center = sphereCol_p;
+            sphereCol.radius = sphereCol_r;
+
+            solveSphereCollision(nextPosition, sphereCol, initialPose.radius);
         };
 
         //capsule collision
-        for (unsigned int i = 0; i < ccCount; i++) {
-            capsuleColArrayHandle.jumpToArrayElement(i);
+        for (unsigned int ccIdx = 0; ccIdx < ccCount; ++ccIdx) {
+            capsuleColArrayHandle.jumpToArrayElement(ccIdx);
             MDataHandle& capsuleCollider = capsuleColArrayHandle.inputValue();
             capsuleCol_mA = capsuleCollider.child(s_capsuleColMtxA).asMatrix();
             capsuleCol_pA = capsuleCol_mA.getTranslation(MSpace::kWorld);
@@ -880,45 +973,19 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
             capsuleCol_mA.getScale(capsuleCol_s, MSpace::kWorld);
             capsuleCol_rA = capsuleCollider.child(s_capsuleColRadA).asDouble() * capsuleCol_s[2];
             capsuleCol_rB = capsuleCollider.child(s_capsuleColRadB).asDouble() * capsuleCol_s[2];
-                
-            const double h = (capsuleCol_pB - capsuleCol_pA).length();
-            const MVector ab = (capsuleCol_pB - capsuleCol_pA).normal();
 
-            const double t = ab * (nextPosition - capsuleCol_pA);
-            const double ratio = t / h;
-            if (ratio <= 0)
-            {
-                v = nextPosition - capsuleCol_pA;
-                r = capsuleCol_rA + initialPose.radius;
-                if (v * v < r * r)
-                {
-                    nextPosition = capsuleCol_pA + (v.normal() * r);
-                };
-            }
-            else if (ratio >= 1)
-            {
-                v = nextPosition - capsuleCol_pB;
-                r = capsuleCol_rB + initialPose.radius;
-                if (v * v < r * r)
-                {
-                    nextPosition = capsuleCol_pB + (v.normal() * r);
-                };
-            }
-            else
-            {
-                const MVector q = capsuleCol_pA + (ab * t);
-                v = nextPosition - q;
-                r = initialPose.radius + (capsuleCol_rA * (1.0 - ratio) + capsuleCol_rB * ratio);
-                if (v * v < r * r)
-                {
-                    nextPosition = q + (v.normal() * r);
-                };
-            };
+            CapsuleColliderData capsuleCol;
+            capsuleCol.pointA = capsuleCol_pA;
+            capsuleCol.pointB = capsuleCol_pB;
+            capsuleCol.radiusA = capsuleCol_rA;
+            capsuleCol.radiusB = capsuleCol_rB;
+            
+            solveCapsuleCollision(nextPosition, capsuleCol, initialPose.radius);
         };
 
         //capsule collision (*Using one center matrix and height)
-        for (unsigned int i = 0; i < cciCount; i++) {
-            capsuleColiderInputArrayHandle.jumpToArrayElement(i);
+        for (unsigned int cciIdx = 0; cciIdx < cciCount; ++cciIdx) {
+            capsuleColiderInputArrayHandle.jumpToArrayElement(cciIdx);
             MDataHandle& capsuleColliderInput = capsuleColiderInputArrayHandle.inputValue();
             
             capsuleColMatrix = capsuleColliderInput.child(s_capsuleColliderMatrix).asMatrix();
@@ -934,91 +1001,43 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
             capsuleColRadiusA = capsuleColliderInput.child(s_capsuleColliderRadiusA).asDouble() * capsuleColScale[2];
             capsuleColRadiusB = capsuleColliderInput.child(s_capsuleColliderRadiusB).asDouble() * capsuleColScale[2];
 
-            const double h = (capsuleColPointB - capsuleColPointA).length();
-            const MVector ab = (capsuleColPointB - capsuleColPointA).normal();
+            CapsuleColliderData capsuleCol;
+            capsuleCol.pointA = capsuleColPointA;
+            capsuleCol.pointB = capsuleColPointB;
+            capsuleCol.radiusA = capsuleColRadiusA;
+            capsuleCol.radiusB = capsuleColRadiusB;
 
-            const double t = ab * (nextPosition - capsuleColPointA);
-            const double ratio = t / h;
-
-            if (ratio <= 0)
-            {
-                v = nextPosition - capsuleColPointA;
-                r = capsuleColRadiusA + initialPose.radius;
-                if (v * v < r * r)
-                {
-                    nextPosition = capsuleColPointA + (v.normal() * r);
-                };
-            }
-            else if (ratio >= 1)
-            {
-                v = nextPosition - capsuleColPointB;
-                r = capsuleColRadiusB + initialPose.radius;
-                if (v * v < r * r)
-                {
-                    nextPosition = capsuleColPointB + (v.normal() * r);
-                };
-            }
-            else
-            {
-                const MVector q = capsuleColPointA + (ab * t);
-                v = nextPosition - q;
-                r = initialPose.radius + (capsuleColRadiusA * (1.0 - ratio) + capsuleColRadiusB * ratio);
-                if (v * v < r * r)
-                {
-                    nextPosition = q + (v.normal() * r);
-                };
-            };
+            solveCapsuleCollision(nextPosition, capsuleCol, initialPose.radius);
         };
 
         //infinite plane collision
-        for (unsigned int i = 0; i < pcCount; i++) {
-            iPlaneColArrayHandle.jumpToArrayElement(i);
+        for (unsigned int pcIdx = 0; pcIdx < pcCount; ++pcIdx) {
+            iPlaneColArrayHandle.jumpToArrayElement(pcIdx);
             MDataHandle& iPlaneCollider = iPlaneColArrayHandle.inputValue();
             iPlaneCol_m = iPlaneCollider.child(s_iPlaneColMtx).asMatrix();
             iPlaneCol_p = iPlaneCol_m.getTranslation(MSpace::kWorld);
             iPlaneCol_n = MVector::yAxis.transformAsNormal(iPlaneCol_m.asMatrix()); // Specified by y-axis
-                
-            const double distancePointPlane = iPlaneCol_n * (nextPosition - iPlaneCol_p);
-            if (distancePointPlane - initialPose.radius < 0)
-            {
-                nextPosition = nextPosition - (iPlaneCol_n * (distancePointPlane - initialPose.radius));
-            };
+
+            InfinitePlaneColliderData iPlaneCol;
+            iPlaneCol.point = iPlaneCol_p;
+            iPlaneCol.normal = iPlaneCol_n;
+
+            solveInfinitePlaneCollision(nextPosition, iPlaneCol, initialPose.radius);
         };
 
         //mesh collision (experimental)
-        for (unsigned int i = 0; i < mcCount; i++) {
-            meshColArrayHandle.jumpToArrayElement(i);
+        for (unsigned int mcIdx = 0; mcIdx < mcCount; ++mcIdx) {
+            meshColArrayHandle.jumpToArrayElement(mcIdx);
             MDataHandle& meshCollider = meshColArrayHandle.inputValue();
             meshCol = meshCollider.asMesh();
 
-            // Get the closest point and closest normal on a mesh
-            MPoint closestPoint;
-            MVector closestNormal;
-            getClosestPoint(meshCol, MPoint(nextPosition), closestPoint, closestNormal);
-            closestNormal = closestNormal.normal();
-
-            // Get the vector from the closest point to the current point
-            const MVector contactVec = nextPosition - MVector(closestPoint);
-
-            // Get the distance to the surface
-            const double distanceContactPoint = closestNormal * contactVec;
-            
-            // If it is penetrated in the surface, it will be pushed out
-            if (distanceContactPoint - initialPose.radius < 0.0) {
-                // If it is completely penetrated, it uses the closest normal to push out, if it is only in contact, it uses the contactVec to push out.
-                MVector pushOutPos = MVector(closestPoint) + ((distanceContactPoint < 0) ? closestNormal : contactVec.normal()) * initialPose.radius;
-                
-                // If the position after push out is within meshColCutoff from the current position, it will be pushed out.
-                if ((nextPosition - pushOutPos).length() < meshColCutoff) {
-                    nextPosition = pushOutPos;
-                }
-            }
+            solveMeshCollision(nextPosition, meshCol, initialPose.radius, meshColCutoff);
         };
             
         //ground collision
         if (enableGroundCol)
         {
-            nextPosition[1] = nextPosition[1] < (groundHeight + initialPose.radius) ? (groundHeight + initialPose.radius) : nextPosition[1]; // Y-Up only
+            solveGroundCollision(nextPosition, groundHeight, initialPose.radius);
         };
 
         // angle limit

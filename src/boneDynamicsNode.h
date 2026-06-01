@@ -111,10 +111,6 @@ public:
     static MObject s_outputRotate;       // output euler rotation
 
 private:
-    void angleLimit(const MVector& pivot, const MVector& a, MVector& b, const double limitAngle);
-    void distanceConstraint(const MVector& pivot, MVector& point, double distance);
-    void getClosestPoint(const MObject& mesh, const MPoint& position, MPoint& closestPoint, MVector& closestNormal);
-    
     struct InitialPoseData : public boneDynamicsUtils::PoseData
     {
         // Inherits from boneDynamicsUtils::PoseData
