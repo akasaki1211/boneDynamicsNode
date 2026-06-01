@@ -15,6 +15,7 @@
 #include <maya/MTransformationMatrix.h>
 
 #include <algorithm> // std::max, std::min
+#include <vector>    // std::vector
 
 namespace
 {
@@ -97,6 +98,7 @@ namespace
     {
         const MVector ab = capsuleCol.pointB - capsuleCol.pointA;
         const double h = ab.length();
+        // TODO: Countermeasures for zero-length capsules
         const MVector abNorm = ab / h;
 
         const double t = abNorm * (position - capsuleCol.pointA);
@@ -910,131 +912,137 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     MArrayDataHandle& meshColArrayHandle = data.inputArrayValue(s_meshCollider);
     const unsigned int mcCount = meshColArrayHandle.elementCount();
     const double meshColCutoff = data.inputValue(s_meshColCutoff).asDouble();
-    
-    MTransformationMatrix sphereCol_m;
-    MVector sphereCol_p;
-    double sphereCol_s[3];
-    double sphereCol_r;
 
-    MTransformationMatrix capsuleCol_mA;
-    MTransformationMatrix capsuleCol_mB;
-    MVector capsuleCol_pA;
-    MVector capsuleCol_pB;
-    double capsuleCol_s[3];
-    double capsuleCol_rA;
-    double capsuleCol_rB;
-    
-    // Using one center matrix and height
-    MMatrix capsuleColMatrix;
-    double capsuleColHeight;
-    MVector capsuleColPointA;
-    MVector capsuleColPointB;
-    double capsuleColScale[3];
-    double capsuleColRadiusA;
-    double capsuleColRadiusB;
-    
-    MTransformationMatrix iPlaneCol_m;
-    MVector iPlaneCol_p;
-    MVector iPlaneCol_n;
-    MObject meshCol;
-
-
+    // number of iterations
     const long iter = data.inputValue(s_iterations).asLong();
 
-    for (int i = 0; i < iter; ++i)
+    // Prepare collider data vectors
+    std::vector<SphereColliderData> sphereColliders(scCount);
+    std::vector<CapsuleColliderData> capsuleColliders(ccCount + cciCount);
+    std::vector<InfinitePlaneColliderData> iPlaneColliders(pcCount);
+    std::vector<MObject> meshColliders(mcCount);
+
+    if (iter > 0)
     {
-        // distance constraint
-        distanceConstraint(initialPose.boneWorldTranslate, nextPosition, initialPose.distance);
-        
-        //sphere collision
+        // sphere collider
         for (unsigned int scIdx = 0; scIdx < scCount; ++scIdx) {
             sphereColArrayHandle.jumpToArrayElement(scIdx);
             MDataHandle& sphereCollider = sphereColArrayHandle.inputValue();
-            sphereCol_m = sphereCollider.child(s_sphereColMtx).asMatrix();
-            sphereCol_p = sphereCol_m.getTranslation(MSpace::kWorld);
-            sphereCol_m.getScale(sphereCol_s, MSpace::kWorld);
-            sphereCol_r = sphereCollider.child(s_sphereColRad).asDouble() * sphereCol_s[2];
-            
-            SphereColliderData sphereCol;
-            sphereCol.center = sphereCol_p;
-            sphereCol.radius = sphereCol_r;
+            const MTransformationMatrix sphereColMatrix = sphereCollider.child(s_sphereColMtx).asMatrix();
+            const MVector sphereColPosition = sphereColMatrix.getTranslation(MSpace::kWorld);
+            double sphereColScale[3];
+            sphereColMatrix.getScale(sphereColScale, MSpace::kWorld);
+            const double sphereColRadius = sphereCollider.child(s_sphereColRad).asDouble() * sphereColScale[2];
 
-            solveSphereCollision(nextPosition, sphereCol, initialPose.radius);
+            SphereColliderData sphereColData;
+            sphereColData.center = sphereColPosition;
+            sphereColData.radius = sphereColRadius;
+
+            sphereColliders[scIdx] = sphereColData;
         };
 
-        //capsule collision
+        // capsule collider (Using two end matrices)
         for (unsigned int ccIdx = 0; ccIdx < ccCount; ++ccIdx) {
             capsuleColArrayHandle.jumpToArrayElement(ccIdx);
             MDataHandle& capsuleCollider = capsuleColArrayHandle.inputValue();
-            capsuleCol_mA = capsuleCollider.child(s_capsuleColMtxA).asMatrix();
-            capsuleCol_pA = capsuleCol_mA.getTranslation(MSpace::kWorld);
-            capsuleCol_mB = capsuleCollider.child(s_capsuleColMtxB).asMatrix();
-            capsuleCol_pB = capsuleCol_mB.getTranslation(MSpace::kWorld);
-            capsuleCol_mA.getScale(capsuleCol_s, MSpace::kWorld);
-            capsuleCol_rA = capsuleCollider.child(s_capsuleColRadA).asDouble() * capsuleCol_s[2];
-            capsuleCol_rB = capsuleCollider.child(s_capsuleColRadB).asDouble() * capsuleCol_s[2];
+            const MTransformationMatrix capsuleColMatrixA = capsuleCollider.child(s_capsuleColMtxA).asMatrix();
+            const MVector capsuleColPositionA = capsuleColMatrixA.getTranslation(MSpace::kWorld);
+            const MTransformationMatrix capsuleColMatrixB = capsuleCollider.child(s_capsuleColMtxB).asMatrix();
+            const MVector capsuleColPositionB = capsuleColMatrixB.getTranslation(MSpace::kWorld);
+            double capsuleColScale[3];
+            capsuleColMatrixA.getScale(capsuleColScale, MSpace::kWorld);
+            const double capsuleColRadiusA = capsuleCollider.child(s_capsuleColRadA).asDouble() * capsuleColScale[2];
+            const double capsuleColRadiusB = capsuleCollider.child(s_capsuleColRadB).asDouble() * capsuleColScale[2];
 
-            CapsuleColliderData capsuleCol;
-            capsuleCol.pointA = capsuleCol_pA;
-            capsuleCol.pointB = capsuleCol_pB;
-            capsuleCol.radiusA = capsuleCol_rA;
-            capsuleCol.radiusB = capsuleCol_rB;
+            CapsuleColliderData capsuleColData;
+            capsuleColData.pointA = capsuleColPositionA;
+            capsuleColData.pointB = capsuleColPositionB;
+            capsuleColData.radiusA = capsuleColRadiusA;
+            capsuleColData.radiusB = capsuleColRadiusB;
             
-            solveCapsuleCollision(nextPosition, capsuleCol, initialPose.radius);
-        };
+            capsuleColliders[ccIdx] = capsuleColData;
+        }
 
-        //capsule collision (*Using one center matrix and height)
+        // capsule collider (Using one center matrix and height)
         for (unsigned int cciIdx = 0; cciIdx < cciCount; ++cciIdx) {
             capsuleColiderInputArrayHandle.jumpToArrayElement(cciIdx);
             MDataHandle& capsuleColliderInput = capsuleColiderInputArrayHandle.inputValue();
             
-            capsuleColMatrix = capsuleColliderInput.child(s_capsuleColliderMatrix).asMatrix();
-            
+            const MMatrix capsuleColMatrix = capsuleColliderInput.child(s_capsuleColliderMatrix).asMatrix();
             const MTransformationMatrix capsuleColTransfomMatrix(capsuleColMatrix);
+            double capsuleColScale[3];
             capsuleColTransfomMatrix.getScale(capsuleColScale, MSpace::kWorld);
-
-            capsuleColHeight = capsuleColliderInput.child(s_capsuleColliderHeight).asDouble();
+            const double capsuleColHeight = capsuleColliderInput.child(s_capsuleColliderHeight).asDouble();
             
-            capsuleColPointA = MVector(MPoint(0, capsuleColHeight * 0.5, 0) * capsuleColMatrix);
-            capsuleColPointB = MVector(MPoint(0, -capsuleColHeight * 0.5, 0) * capsuleColMatrix);
+            const MVector capsuleColPointA = MVector(MPoint(0, capsuleColHeight * 0.5, 0) * capsuleColMatrix);
+            const MVector capsuleColPointB = MVector(MPoint(0, -capsuleColHeight * 0.5, 0) * capsuleColMatrix);
 
-            capsuleColRadiusA = capsuleColliderInput.child(s_capsuleColliderRadiusA).asDouble() * capsuleColScale[2];
-            capsuleColRadiusB = capsuleColliderInput.child(s_capsuleColliderRadiusB).asDouble() * capsuleColScale[2];
+            const double capsuleColRadiusA = capsuleColliderInput.child(s_capsuleColliderRadiusA).asDouble() * capsuleColScale[2];
+            const double capsuleColRadiusB = capsuleColliderInput.child(s_capsuleColliderRadiusB).asDouble() * capsuleColScale[2];
 
-            CapsuleColliderData capsuleCol;
-            capsuleCol.pointA = capsuleColPointA;
-            capsuleCol.pointB = capsuleColPointB;
-            capsuleCol.radiusA = capsuleColRadiusA;
-            capsuleCol.radiusB = capsuleColRadiusB;
+            CapsuleColliderData capsuleColData;
+            capsuleColData.pointA = capsuleColPointA;
+            capsuleColData.pointB = capsuleColPointB;
+            capsuleColData.radiusA = capsuleColRadiusA;
+            capsuleColData.radiusB = capsuleColRadiusB;
 
-            solveCapsuleCollision(nextPosition, capsuleCol, initialPose.radius);
-        };
+            capsuleColliders[ccCount + cciIdx] = capsuleColData; // add to the end of the vector
+        }
 
-        //infinite plane collision
+        // infinite plane collider
         for (unsigned int pcIdx = 0; pcIdx < pcCount; ++pcIdx) {
             iPlaneColArrayHandle.jumpToArrayElement(pcIdx);
             MDataHandle& iPlaneCollider = iPlaneColArrayHandle.inputValue();
-            iPlaneCol_m = iPlaneCollider.child(s_iPlaneColMtx).asMatrix();
-            iPlaneCol_p = iPlaneCol_m.getTranslation(MSpace::kWorld);
-            iPlaneCol_n = MVector::yAxis.transformAsNormal(iPlaneCol_m.asMatrix()); // Specified by y-axis
+            const MTransformationMatrix iPlaneColMatrix = iPlaneCollider.child(s_iPlaneColMtx).asMatrix();
+            const MVector iPlaneColPosition = iPlaneColMatrix.getTranslation(MSpace::kWorld);
+            const MVector iPlaneColNormal = MVector::yAxis.transformAsNormal(iPlaneColMatrix.asMatrix()); // Specified by y-axis
 
             InfinitePlaneColliderData iPlaneCol;
-            iPlaneCol.point = iPlaneCol_p;
-            iPlaneCol.normal = iPlaneCol_n;
+            iPlaneCol.point = iPlaneColPosition;
+            iPlaneCol.normal = iPlaneColNormal;
 
-            solveInfinitePlaneCollision(nextPosition, iPlaneCol, initialPose.radius);
-        };
+            iPlaneColliders[pcIdx] = iPlaneCol;
+        }
 
-        //mesh collision (experimental)
+        // mesh collider
         for (unsigned int mcIdx = 0; mcIdx < mcCount; ++mcIdx) {
             meshColArrayHandle.jumpToArrayElement(mcIdx);
             MDataHandle& meshCollider = meshColArrayHandle.inputValue();
-            meshCol = meshCollider.asMesh();
+            meshColliders[mcIdx] = meshCollider.asMesh();
+        }
+    }
 
+    // constraints and collisions iterations
+    for (int i = 0; i < iter; ++i)
+    {
+        // distance constraint
+        distanceConstraint(initialPose.boneWorldTranslate, nextPosition, initialPose.distance);
+
+        // sphere collision
+        for (const SphereColliderData& sphereCol : sphereColliders)
+        {
+            solveSphereCollision(nextPosition, sphereCol, initialPose.radius);
+        }
+
+        // capsule collision
+        for (const CapsuleColliderData& capsuleCol : capsuleColliders)
+        {
+            solveCapsuleCollision(nextPosition, capsuleCol, initialPose.radius);
+        }
+
+        // infinite plane collision
+        for (const InfinitePlaneColliderData& iPlaneCol : iPlaneColliders)
+        {
+            solveInfinitePlaneCollision(nextPosition, iPlaneCol, initialPose.radius);
+        }
+
+        // mesh collision (experimental)
+        for (const MObject& meshCol : meshColliders)
+        {
             solveMeshCollision(nextPosition, meshCol, initialPose.radius, meshColCutoff);
-        };
-            
-        //ground collision
+        }
+
+        // ground collision
         if (enableGroundCol)
         {
             solveGroundCollision(nextPosition, groundHeight, initialPose.radius);
