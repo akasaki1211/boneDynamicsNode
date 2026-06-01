@@ -63,19 +63,19 @@ MStatus capsuleColliderNode::initialize()
     s_radiusA = uAttr.create("radiusA", "ra", MFnUnitAttribute::kDistance, 1.0);
     uAttr.setKeyable(false);
     uAttr.setChannelBox(true);
-    uAttr.setMin(0);
+    uAttr.setMin(0.001);
     uAttr.setAffectsAppearance(true);
 
     s_radiusB = uAttr.create("radiusB", "rb", MFnUnitAttribute::kDistance, 1.0);
     uAttr.setKeyable(false);
     uAttr.setChannelBox(true);
-    uAttr.setMin(0);
+    uAttr.setMin(0.001);
     uAttr.setAffectsAppearance(true);
 
     s_height = uAttr.create("height", "h", MFnUnitAttribute::kDistance, 2.0 );
     uAttr.setKeyable(false);
     uAttr.setChannelBox(true);
-    uAttr.setMin(0);
+    uAttr.setMin(0.001);
     uAttr.setAffectsAppearance(true);
 
     s_segments = nAttr.create("segments", "s", MFnNumericData::kInt, 4);

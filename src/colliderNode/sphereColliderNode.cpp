@@ -55,7 +55,7 @@ MStatus sphereColliderNode::initialize()
     s_radius = uAttr.create("radius", "r", MFnUnitAttribute::kDistance, 1.0);
     uAttr.setKeyable(false);
     uAttr.setChannelBox(true);
-    uAttr.setMin(0);
+    uAttr.setMin(0.001);
     uAttr.setAffectsAppearance(true);
 
     s_segments = nAttr.create("segments", "s", MFnNumericData::kInt, 4);
