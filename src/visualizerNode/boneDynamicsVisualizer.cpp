@@ -158,29 +158,29 @@ MStatus boneDynamicsVisualizer::initialize()
     nAttr.setMin(0);
     nAttr.setAffectsAppearance(true);
 
-    addAttribute(s_drawAngleLimit);
-    addAttribute(s_drawCollisionRadius);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_drawAngleLimit));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_drawCollisionRadius));
 
-    addAttribute(s_enable);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_enable));
 
-    addAttribute(s_outputRotate);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_outputRotate));
 
-    addAttribute(s_boneTranslate);
-    addAttribute(s_boneJointOrient);
-    addAttribute(s_boneParentMatrix);
-    addAttribute(s_boneParentInverseMatrix);
-    addAttribute(s_boneScale);
-    addAttribute(s_boneInverseScale);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneTranslate));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneJointOrient));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneParentMatrix));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneParentInverseMatrix));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneScale));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneInverseScale));
 
-    addAttribute(s_endTranslate);
-    addAttribute(s_endScale);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_endTranslate));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_endScale));
 
-    addAttribute(s_rotationOffset);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_rotationOffset));
 
-    addAttribute(s_radius);
-    
-    addAttribute(s_angleLimit);
-    addAttribute(s_angleConeSize);    
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_radius));
+
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_angleLimit));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_angleConeSize));
 
     return MS::kSuccess;
 }

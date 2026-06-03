@@ -753,7 +753,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     if (!enable)
     {
         outputRotateHandle.set3Double(0.0, 0.0, 0.0);
-        data.setClean(plug);
+        CHECK_MSTATUS_AND_RETURN_IT(data.setClean(plug));
 
         return MS::kSuccess;
     }
@@ -791,7 +791,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
             initialPose.rotationOffsetEuler.y, 
             initialPose.rotationOffsetEuler.z
         );
-        data.setClean(plug);
+        CHECK_MSTATUS_AND_RETURN_IT(data.setClean(plug));
         
         return MS::kSuccess;
     }
@@ -926,12 +926,12 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     {
         // sphere collider
         for (unsigned int scIdx = 0; scIdx < scCount; ++scIdx) {
-            sphereColArrayHandle.jumpToArrayElement(scIdx);
+            CHECK_MSTATUS_AND_RETURN_IT(sphereColArrayHandle.jumpToArrayElement(scIdx));
             MDataHandle& sphereCollider = sphereColArrayHandle.inputValue();
             const MTransformationMatrix sphereColMatrix = sphereCollider.child(s_sphereColMtx).asMatrix();
             const MVector sphereColPosition = sphereColMatrix.getTranslation(MSpace::kWorld);
             double sphereColScale[3];
-            sphereColMatrix.getScale(sphereColScale, MSpace::kWorld);
+            CHECK_MSTATUS_AND_RETURN_IT(sphereColMatrix.getScale(sphereColScale, MSpace::kWorld));
             const double sphereColRadius = sphereCollider.child(s_sphereColRad).asDouble() * sphereColScale[2];
 
             SphereColliderData sphereColData;
@@ -943,14 +943,14 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
 
         // capsule collider (Using two end matrices)
         for (unsigned int ccIdx = 0; ccIdx < ccCount; ++ccIdx) {
-            capsuleColArrayHandle.jumpToArrayElement(ccIdx);
+            CHECK_MSTATUS_AND_RETURN_IT(capsuleColArrayHandle.jumpToArrayElement(ccIdx));
             MDataHandle& capsuleCollider = capsuleColArrayHandle.inputValue();
             const MTransformationMatrix capsuleColMatrixA = capsuleCollider.child(s_capsuleColMtxA).asMatrix();
             const MVector capsuleColPositionA = capsuleColMatrixA.getTranslation(MSpace::kWorld);
             const MTransformationMatrix capsuleColMatrixB = capsuleCollider.child(s_capsuleColMtxB).asMatrix();
             const MVector capsuleColPositionB = capsuleColMatrixB.getTranslation(MSpace::kWorld);
             double capsuleColScale[3];
-            capsuleColMatrixA.getScale(capsuleColScale, MSpace::kWorld);
+            CHECK_MSTATUS_AND_RETURN_IT(capsuleColMatrixA.getScale(capsuleColScale, MSpace::kWorld));
             const double capsuleColRadiusA = capsuleCollider.child(s_capsuleColRadA).asDouble() * capsuleColScale[2];
             const double capsuleColRadiusB = capsuleCollider.child(s_capsuleColRadB).asDouble() * capsuleColScale[2];
 
@@ -965,13 +965,13 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
 
         // capsule collider (Using one center matrix and height)
         for (unsigned int cciIdx = 0; cciIdx < cciCount; ++cciIdx) {
-            capsuleColiderInputArrayHandle.jumpToArrayElement(cciIdx);
+            CHECK_MSTATUS_AND_RETURN_IT(capsuleColiderInputArrayHandle.jumpToArrayElement(cciIdx));
             MDataHandle& capsuleColliderInput = capsuleColiderInputArrayHandle.inputValue();
             
             const MMatrix capsuleColMatrix = capsuleColliderInput.child(s_capsuleColliderMatrix).asMatrix();
             const MTransformationMatrix capsuleColTransfomMatrix(capsuleColMatrix);
             double capsuleColScale[3];
-            capsuleColTransfomMatrix.getScale(capsuleColScale, MSpace::kWorld);
+            CHECK_MSTATUS_AND_RETURN_IT(capsuleColTransfomMatrix.getScale(capsuleColScale, MSpace::kWorld));
             const double capsuleColHeight = capsuleColliderInput.child(s_capsuleColliderHeight).asDouble();
             
             const MVector capsuleColPointA = MVector(MPoint(0, capsuleColHeight * 0.5, 0) * capsuleColMatrix);
@@ -991,7 +991,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
 
         // infinite plane collider
         for (unsigned int pcIdx = 0; pcIdx < pcCount; ++pcIdx) {
-            iPlaneColArrayHandle.jumpToArrayElement(pcIdx);
+            CHECK_MSTATUS_AND_RETURN_IT(iPlaneColArrayHandle.jumpToArrayElement(pcIdx));
             MDataHandle& iPlaneCollider = iPlaneColArrayHandle.inputValue();
             const MTransformationMatrix iPlaneColMatrix = iPlaneCollider.child(s_iPlaneColMtx).asMatrix();
             const MVector iPlaneColPosition = iPlaneColMatrix.getTranslation(MSpace::kWorld);
@@ -1006,7 +1006,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
 
         // mesh collider
         for (unsigned int mcIdx = 0; mcIdx < mcCount; ++mcIdx) {
-            meshColArrayHandle.jumpToArrayElement(mcIdx);
+            CHECK_MSTATUS_AND_RETURN_IT(meshColArrayHandle.jumpToArrayElement(mcIdx));
             MDataHandle& meshCollider = meshColArrayHandle.inputValue();
             meshColliders[mcIdx] = meshCollider.asMesh();
         }
@@ -1088,7 +1088,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     const MEulerRotation rot = offseted_quat.asEulerRotation();
     
     outputRotateHandle.set3Double(rot.x, rot.y, rot.z);
-    data.setClean(plug);
+    CHECK_MSTATUS_AND_RETURN_IT(data.setClean(plug));
 
     return MS::kSuccess;
 }

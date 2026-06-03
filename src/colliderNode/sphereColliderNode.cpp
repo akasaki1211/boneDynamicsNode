@@ -65,8 +65,8 @@ MStatus sphereColliderNode::initialize()
     nAttr.setMax(16);
     nAttr.setAffectsAppearance(true);
 
-    addAttribute(s_radius);
-    addAttribute(s_segments);
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_radius));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_segments));
 
     return MS::kSuccess;
 }

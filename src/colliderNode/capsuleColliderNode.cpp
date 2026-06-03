@@ -85,11 +85,11 @@ MStatus capsuleColliderNode::initialize()
     nAttr.setMax(16);
     nAttr.setAffectsAppearance(true);
 
-    addAttribute(s_radiusA);
-    addAttribute(s_radiusB);
-    addAttribute(s_height);
-    addAttribute(s_segments);
-    
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_radiusA));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_radiusB));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_height));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_segments));
+
     return MS::kSuccess;
 }
 

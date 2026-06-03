@@ -25,11 +25,7 @@ MStatus initializePlugin(MObject obj)
         boneDynamicsNode::creator, 
         boneDynamicsNode::initialize
     );
-    if (!status)
-    {
-        status.perror("register " boneDynamicsNodeName);
-        return status;
-    }
+    CHECK_MSTATUS_AND_RETURN_IT(status);
 
     // sphereColliderNode
     status = plugin.registerNode(
@@ -40,22 +36,14 @@ MStatus initializePlugin(MObject obj)
         MPxNode::kLocatorNode,
         &sphereColliderNode::s_drawDbClassification
     );
-    if (!status)
-    {
-        status.perror("register " sphereColliderNodeName);
-        return status;
-    }
+    CHECK_MSTATUS_AND_RETURN_IT(status);
 
     status = MHWRender::MDrawRegistry::registerDrawOverrideCreator(
         sphereColliderNode::s_drawDbClassification,
         sphereColliderNode::s_drawRegistrantId,
         sphereColliderDrawOverride::creator
     );
-    if (!status)
-    {
-        status.perror("registerDrawOverrideCreator " sphereColliderNodeName);
-        return status;
-    }
+    CHECK_MSTATUS_AND_RETURN_IT(status);
 
     // capsuleColliderNode
     status = plugin.registerNode(
@@ -66,22 +54,14 @@ MStatus initializePlugin(MObject obj)
         MPxNode::kLocatorNode,
         &capsuleColliderNode::s_drawDbClassification
     );
-    if (!status)
-    {
-        status.perror("register " capsuleColliderNodeName);
-        return status;
-    }
+    CHECK_MSTATUS_AND_RETURN_IT(status);
 
     status = MHWRender::MDrawRegistry::registerDrawOverrideCreator(
         capsuleColliderNode::s_drawDbClassification,
         capsuleColliderNode::s_drawRegistrantId,
         capsuleColliderDrawOverride::creator
     );
-    if (!status)
-    {
-        status.perror("registerDrawOverrideCreator " capsuleColliderNodeName);
-        return status;
-    }
+    CHECK_MSTATUS_AND_RETURN_IT(status);
 
     // infinitePlaneColliderNode
     status = plugin.registerNode(
@@ -92,22 +72,14 @@ MStatus initializePlugin(MObject obj)
         MPxNode::kLocatorNode,
         &infinitePlaneColliderNode::s_drawDbClassification
     );
-    if (!status)
-    {
-        status.perror("register " infinitePlaneColliderNodeName);
-        return status;
-    }
+    CHECK_MSTATUS_AND_RETURN_IT(status);
 
     status = MHWRender::MDrawRegistry::registerDrawOverrideCreator(
         infinitePlaneColliderNode::s_drawDbClassification,
         infinitePlaneColliderNode::s_drawRegistrantId,
         infinitePlaneColliderDrawOverride::creator
     );
-    if (!status)
-    {
-        status.perror("registerDrawOverrideCreator " infinitePlaneColliderNodeName);
-        return status;
-    }
+    CHECK_MSTATUS_AND_RETURN_IT(status);
 
     // boneDynamicsVisualizer
     status = plugin.registerNode(
@@ -118,22 +90,14 @@ MStatus initializePlugin(MObject obj)
         MPxNode::kLocatorNode,
         &boneDynamicsVisualizer::s_drawDbClassification
     );
-    if (!status)
-    {
-        status.perror("register " boneDynamicsVisualizerName);
-        return status;
-    }
+    CHECK_MSTATUS_AND_RETURN_IT(status);
 
     status = MHWRender::MDrawRegistry::registerDrawOverrideCreator(
         boneDynamicsVisualizer::s_drawDbClassification,
         boneDynamicsVisualizer::s_drawRegistrantId,
         visualizerDrawOverride::creator
     );
-    if (!status)
-    {
-        status.perror("registerDrawOverrideCreator " boneDynamicsVisualizerName);
-        return status;
-    }
+    CHECK_MSTATUS_AND_RETURN_IT(status);
 
     return MS::kSuccess;
 }
@@ -148,88 +112,44 @@ MStatus uninitializePlugin(MObject obj)
         boneDynamicsVisualizer::s_drawDbClassification,
         boneDynamicsVisualizer::s_drawRegistrantId
     );
-
-    if (!status)
-    {
-        status.perror("deregisterDrawOverrideCreator " boneDynamicsVisualizerName);
-        return status;
-    }
+    CHECK_MSTATUS_AND_RETURN_IT(status);
 
     status = plugin.deregisterNode(boneDynamicsVisualizer::s_id);
-
-    if (!status)
-    {
-        status.perror("deregisterNode " boneDynamicsVisualizerName);
-        return status;
-    }
+    CHECK_MSTATUS_AND_RETURN_IT(status);
 
     // infinitePlaneColliderNode
     status = MHWRender::MDrawRegistry::deregisterDrawOverrideCreator(
         infinitePlaneColliderNode::s_drawDbClassification,
         infinitePlaneColliderNode::s_drawRegistrantId
     );
-
-    if (!status)
-    {
-        status.perror("deregisterDrawOverrideCreator " infinitePlaneColliderNodeName);
-        return status;
-    }
+    CHECK_MSTATUS_AND_RETURN_IT(status);
 
     status = plugin.deregisterNode(infinitePlaneColliderNode::s_id);
-
-    if (!status)
-    {
-        status.perror("deregisterNode " infinitePlaneColliderNodeName);
-        return status;
-    }
+    CHECK_MSTATUS_AND_RETURN_IT(status);
 
     // capsuleColliderNode
     status = MHWRender::MDrawRegistry::deregisterDrawOverrideCreator(
         capsuleColliderNode::s_drawDbClassification,
         capsuleColliderNode::s_drawRegistrantId
     );
-
-    if (!status)
-    {
-        status.perror("deregisterDrawOverrideCreator " capsuleColliderNodeName);
-        return status;
-    }
+    CHECK_MSTATUS_AND_RETURN_IT(status);
 
     status = plugin.deregisterNode(capsuleColliderNode::s_id);
-
-    if (!status)
-    {
-        status.perror("deregisterNode " capsuleColliderNodeName);
-        return status;
-    }
+    CHECK_MSTATUS_AND_RETURN_IT(status);
 
     // sphereColliderNode
     status = MHWRender::MDrawRegistry::deregisterDrawOverrideCreator(
         sphereColliderNode::s_drawDbClassification,
         sphereColliderNode::s_drawRegistrantId
     );
-
-    if (!status)
-    {
-        status.perror("deregisterDrawOverrideCreator " sphereColliderNodeName);
-        return status;
-    }
+    CHECK_MSTATUS_AND_RETURN_IT(status);
 
     status = plugin.deregisterNode(sphereColliderNode::s_id);
-
-    if (!status)
-    {
-        status.perror("deregister " sphereColliderNodeName);
-        return status;
-    }
+    CHECK_MSTATUS_AND_RETURN_IT(status);
 
     // boneDynamicsNode
     status = plugin.deregisterNode(boneDynamicsNode::s_id);
-    if (!status)
-    {
-        status.perror("deregister " boneDynamicsNodeName);
-        return status;
-    }
+    CHECK_MSTATUS_AND_RETURN_IT(status);
 
     return MS::kSuccess;
 }
