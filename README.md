@@ -4,7 +4,8 @@
 
 **boneDynamicsNode** is a custom node for Autodesk Maya that enables dynamic simulation on joint chains. It is designed for easy integration into rigs, this node supports features such as collision handling, angle limits, target pose manipulation, and more.
 
-> ⚠ **Warning**: Internal Use ID `0x7b001` is used.
+> ⚠️ **Warning**: This plug-in uses internal-use Maya node IDs:  
+> `0x7b001`, `0x7b002`, `0x7b003`, `0x7b004`, and `0x7b009`.  
 
 ## ✨ Features
 
