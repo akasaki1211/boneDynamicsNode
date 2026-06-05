@@ -131,20 +131,13 @@ namespace
     void solveCapsuleCollision(MVector& position, const CapsuleColliderData& capsuleCol, double radius)
     {
         const MVector ab = capsuleCol.pointB - capsuleCol.pointA;
-        const double h = ab.length();
-        // TODO: Countermeasures for zero-length capsules
-        const MVector abNorm = ab / h;
-
-        const double t = abNorm * (position - capsuleCol.pointA);
-        const double ratio = std::max(0.0, std::min(t / h, 1.0));
-
-        const MVector closestPoint = capsuleCol.pointA + abNorm * (h * ratio);
-        
-        const MVector v = position - closestPoint;
-        const double r = radius + (capsuleCol.radiusA * (1.0 - ratio) + capsuleCol.radiusB * ratio);
-        if (v * v < r * r)
+        double t = getProjectionRatio(position - capsuleCol.pointA, ab);
+        const MVector closestPoint = capsuleCol.pointA + ab * t;
+        const MVector d = position - closestPoint;
+        const double r = radius + (capsuleCol.radiusA * (1.0 - t) + capsuleCol.radiusB * t);
+        if (d * d < r * r)
         {
-            position = closestPoint + v.normal() * r;
+            position = closestPoint + d.normal() * r;
         }
     }
 
