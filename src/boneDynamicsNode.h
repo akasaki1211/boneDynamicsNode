@@ -75,6 +75,7 @@ public:
 
     // radius
     static MObject s_radius;            // radius
+    static MObject s_boneAsCapsule;     // bone collision detection as a capsule
 
     // iterations
     static MObject s_iterations;        // iterations of constraints
