@@ -35,6 +35,7 @@ MObject boneDynamicsVisualizer::s_endScale;
 
 MObject boneDynamicsVisualizer::s_rotationOffset;
 
+MObject boneDynamicsVisualizer::s_rootRadius;
 MObject boneDynamicsVisualizer::s_radius;
 
 MObject boneDynamicsVisualizer::s_boneAsCapsule;
@@ -144,6 +145,10 @@ MStatus boneDynamicsVisualizer::initialize()
     nAttr.setKeyable(true);
     nAttr.setAffectsAppearance(true);
 
+    s_rootRadius = nAttr.create("rootRadius", "rr", MFnNumericData::kDouble, 1.0); // TODO: Change to MFnUnitAttribute::kDistance
+    nAttr.setKeyable(true);
+    nAttr.setMin(0);
+    nAttr.setAffectsAppearance(true);
     s_radius = nAttr.create("radius", "r", MFnNumericData::kDouble, 1.0); // TODO: Change to MFnUnitAttribute::kDistance
     nAttr.setKeyable(true);
     nAttr.setMin(0);
@@ -184,6 +189,7 @@ MStatus boneDynamicsVisualizer::initialize()
 
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_rotationOffset));
 
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_rootRadius));
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_radius));
 
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneAsCapsule));
@@ -257,6 +263,7 @@ MUserData* visualizerDrawOverride::prepareForDraw(
     boneInput.boneInverseScale = visualizerGeometry::getVectorPlug(node, boneDynamicsVisualizer::s_boneInverseScale, MVector(1.0, 1.0, 1.0));
     boneInput.endScale = visualizerGeometry::getVectorPlug(node, boneDynamicsVisualizer::s_endScale, MVector(1.0, 1.0, 1.0));
     boneInput.radius = visualizerGeometry::getDoublePlug(node, boneDynamicsVisualizer::s_radius);
+    boneInput.rootRadius = visualizerGeometry::getDoublePlug(node, boneDynamicsVisualizer::s_rootRadius);
 
     // build pose data
     const boneDynamicsUtils::PoseData pose = boneDynamicsUtils::buildPoseData(boneInput);
@@ -274,8 +281,10 @@ MUserData* visualizerDrawOverride::prepareForDraw(
     // draw
     
     drawData->collisionLines.clear();
-    
-    if (drawBoneCollision && pose.radius > 0.0)
+
+    const bool hasCollisionShape = boneAsCapsule ? (pose.rootRadius > 0.0 || pose.radius > 0.0) : pose.radius > 0.0;
+
+    if (drawBoneCollision && hasCollisionShape)
     {
         if (boneAsCapsule)
         {
@@ -283,7 +292,7 @@ MUserData* visualizerDrawOverride::prepareForDraw(
             MTransformationMatrix endTransformationMatrix(endMatrix);
             const MVector endTranslate = endTransformationMatrix.getTranslation(MSpace::kWorld);
             endTransformationMatrix.setTranslation((pose.boneWorldTranslate + endTranslate) * 0.5, MSpace::kWorld);
-            visualizerGeometry::appendCapsule(drawData->collisionLines, pose.radius, pose.radius, pose.distance, endTransformationMatrix.asMatrix());
+            visualizerGeometry::appendCapsule(drawData->collisionLines, pose.rootRadius, pose.radius, pose.distance, endTransformationMatrix.asMatrix());
         }
         else
         {

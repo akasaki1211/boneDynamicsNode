@@ -20,6 +20,8 @@
 
 namespace
 {
+    constexpr double kCapsuleMinThreshold = 0.1;
+
     /*double getFPS()
     {
         float fps = 24.0f;
@@ -103,8 +105,8 @@ namespace
     // sphere collision
     void solveSphereCollision(MVector& position, const SphereColliderData& sphereCol, double radius)
     {
-        double r = sphereCol.radius + radius;
         const MVector v = position - sphereCol.center;
+        const double r = sphereCol.radius + radius;
         if (v * v < r * r)
         {
             position = sphereCol.center + (v.normal() * r);
@@ -112,13 +114,15 @@ namespace
     }
 
     // sphere collision (bone as capsule ver)
-    void solveSphereCollision(MVector& position, const MVector& pivot, const SphereColliderData& sphereCol, double radius)
+    void solveSphereCollision(MVector& position, const MVector& pivot, const SphereColliderData& sphereCol, double radius, double rootRadius)
     {
-        double r = sphereCol.radius + radius;
         const MVector u = position - pivot;
-        double t = getProjectionRatio((sphereCol.center - pivot), u, 0.05, 1.0);
+        double t = getProjectionRatio((sphereCol.center - pivot), u, kCapsuleMinThreshold, 1.0);
         const MVector p = pivot + t * u; // closest point
         const MVector d = p - sphereCol.center;
+
+        const double boneRadius = rootRadius * (1.0 - t) + radius * t;
+        const double r = sphereCol.radius + boneRadius;
         
         if (d * d < r * r)
         {
@@ -131,7 +135,7 @@ namespace
     void solveCapsuleCollision(MVector& position, const CapsuleColliderData& capsuleCol, double radius)
     {
         const MVector ab = capsuleCol.pointB - capsuleCol.pointA;
-        double t = getProjectionRatio(position - capsuleCol.pointA, ab);
+        const double t = getProjectionRatio(position - capsuleCol.pointA, ab);
         const MVector closestPoint = capsuleCol.pointA + ab * t;
         const MVector d = position - closestPoint;
         const double r = radius + (capsuleCol.radiusA * (1.0 - t) + capsuleCol.radiusB * t);
@@ -142,7 +146,7 @@ namespace
     }
 
     // capsule collision (bone as capsule ver)
-    void solveCapsuleCollision(MVector& position, const MVector& pivot, const CapsuleColliderData& capsuleCol, double radius)
+    void solveCapsuleCollision(MVector& position, const MVector& pivot, const CapsuleColliderData& capsuleCol, double radius, double rootRadius)
     {
         const MVector u = position - pivot;
         const MVector v = capsuleCol.pointB - capsuleCol.pointA;
@@ -201,8 +205,9 @@ namespace
             evaluateShortest(getProjectionRatio(capsuleCol.pointB - pivot, u), 1.0);
         }
 
+        const double boneRadius = rootRadius * (1.0 - t1) + radius * t1;
         const double capsuleRadius = capsuleCol.radiusA * (1.0 - t2) + capsuleCol.radiusB * t2;
-        const double r = radius + capsuleRadius;
+        const double r = boneRadius + capsuleRadius;
 
         const MVector d = p - q;
 
@@ -210,7 +215,7 @@ namespace
         {
             const MVector dp = (q + d.normal() * r) - p; // delta p
             //position = position + (dp / t1);
-            position = position + (dp / std::max(0.05, t1));
+            position = position + (dp / std::max(kCapsuleMinThreshold, t1));
         }
     }
 
@@ -311,6 +316,7 @@ MObject boneDynamicsNode::s_turbulenceVectorChangeMax;
 MObject boneDynamicsNode::s_enableAngleLimit;
 MObject boneDynamicsNode::s_angleLimit;
 
+MObject boneDynamicsNode::s_rootRadius;
 MObject boneDynamicsNode::s_radius;
 MObject boneDynamicsNode::s_boneAsCapsule;
 
@@ -538,6 +544,10 @@ MStatus boneDynamicsNode::initialize()
     nAttr.setMax(360);
 
     // radius
+    s_rootRadius = nAttr.create("rootRadius", "rr", MFnNumericData::kDouble, 0.0); // TODO: Change to MFnUnitAttribute::kDistance
+    nAttr.setKeyable(true);
+    nAttr.setMin(0);
+
     s_radius = nAttr.create("radius", "r", MFnNumericData::kDouble, 0.0); // TODO: Change to MFnUnitAttribute::kDistance
     nAttr.setKeyable(true);
     nAttr.setMin(0);
@@ -693,8 +703,10 @@ MStatus boneDynamicsNode::initialize()
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_enableAngleLimit));
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_angleLimit));
 
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_rootRadius));
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_radius));
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneAsCapsule));
+
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_iterations));
 
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_enableGroundCol));
@@ -752,6 +764,7 @@ MStatus boneDynamicsNode::initialize()
         s_enableAngleLimit,
         s_angleLimit,
 
+        s_rootRadius,
         s_radius,
         s_boneAsCapsule,
         s_iterations,
@@ -812,6 +825,7 @@ boneDynamicsNode::InitialPoseData boneDynamicsNode::buildInitialPoseData(MDataBl
 
     // radius input
     input.radius = data.inputValue(s_radius).asDouble();
+    input.rootRadius = data.inputValue(s_rootRadius).asDouble();
 
     // build pose data
     const boneDynamicsUtils::PoseData poseData = boneDynamicsUtils::buildPoseData(input);
@@ -1135,7 +1149,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         {
             if (boneAsCapsule)
             {
-                solveSphereCollision(nextPosition, initialPose.boneWorldTranslate, sphereCol, initialPose.radius);
+                solveSphereCollision(nextPosition, initialPose.boneWorldTranslate, sphereCol, initialPose.radius, initialPose.rootRadius);
             }
             else
             {
@@ -1148,7 +1162,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         {
             if (boneAsCapsule)
             {
-                solveCapsuleCollision(nextPosition, initialPose.boneWorldTranslate, capsuleCol, initialPose.radius);
+                solveCapsuleCollision(nextPosition, initialPose.boneWorldTranslate, capsuleCol, initialPose.radius, initialPose.rootRadius);
             }
             else
             {

@@ -176,10 +176,15 @@ namespace visualizerGeometry
         for (int i = 0; i < 4; ++i)
         {
             const double theta = 2.0 * pi * static_cast<double>(i) / 4.0;
-            const double y = radiusA * std::cos(theta);
-            const double z = radiusA * std::sin(theta);
+            const double y = std::cos(theta);
+            const double z = std::sin(theta);
 
-            appendLine(lineList, MPoint(-halfHeight, y, z), MPoint(halfHeight, y, z), capsuleWorldMatrix);
+            appendLine(
+                lineList, 
+                MPoint(-halfHeight, y * radiusA, z * radiusA), 
+                MPoint(halfHeight, y * radiusB, z * radiusB), 
+                capsuleWorldMatrix
+            );
         }
 
         // circle lines
@@ -188,13 +193,23 @@ namespace visualizerGeometry
             const double theta1 = 2.0 * pi * static_cast<double>(i) / doubleSegments;
             const double theta2 = 2.0 * pi * static_cast<double>(i + 1) / doubleSegments;
 
-            const double a = radiusA * std::cos(theta1);
-            const double b = radiusA * std::sin(theta1);
-            const double c = radiusA * std::cos(theta2);
-            const double d = radiusA * std::sin(theta2);
+            const double a = std::cos(theta1);
+            const double b = std::sin(theta1);
+            const double c = std::cos(theta2);
+            const double d = std::sin(theta2);
 
-            appendLine(lineList, MPoint(halfHeight, a, b), MPoint(halfHeight, c, d), capsuleWorldMatrix);
-            appendLine(lineList, MPoint(-halfHeight, a, b), MPoint(-halfHeight, c, d), capsuleWorldMatrix);
+            appendLine(
+                lineList, 
+                MPoint(halfHeight, a * radiusB, b * radiusB), 
+                MPoint(halfHeight, c * radiusB, d * radiusB), 
+                capsuleWorldMatrix
+            );
+            appendLine(
+                lineList, 
+                MPoint(-halfHeight, a * radiusA, b * radiusA), 
+                MPoint(-halfHeight, c * radiusA, d * radiusA), 
+                capsuleWorldMatrix
+            );
         }
 
         // hemisphere
@@ -203,22 +218,42 @@ namespace visualizerGeometry
             const double theta1 = 2.0 * pi * static_cast<double>(i) / doubleSegments;
             const double theta2 = 2.0 * pi * static_cast<double>(i + 1) / doubleSegments;
 
-            const double a = radiusA * std::cos(theta1);
-            const double b = radiusA * std::sin(theta1);
-            const double c = radiusA * std::cos(theta2);
-            const double d = radiusA * std::sin(theta2);
+            const double a = std::cos(theta1);
+            const double b = std::sin(theta1);
+            const double c = std::cos(theta2);
+            const double d = std::sin(theta2);
 
             // XY
-            appendLine(lineList, MPoint(b + halfHeight, a, 0.0), MPoint(d + halfHeight, c, 0.0), capsuleWorldMatrix);
+            appendLine(
+                lineList, 
+                MPoint(b * radiusB + halfHeight, a * radiusB, 0.0), 
+                MPoint(d * radiusB + halfHeight, c * radiusB, 0.0), 
+                capsuleWorldMatrix
+            );
 
             // XZ
-            appendLine(lineList, MPoint(b + halfHeight, 0.0, a), MPoint(d + halfHeight, 0.0, c), capsuleWorldMatrix);
+            appendLine(
+                lineList, 
+                MPoint(b * radiusB + halfHeight, 0.0, a * radiusB), 
+                MPoint(d * radiusB + halfHeight, 0.0, c * radiusB), 
+                capsuleWorldMatrix
+            );
 
             // XY
-            appendLine(lineList, MPoint(-b - halfHeight, a, 0.0), MPoint(-d - halfHeight, c, 0.0), capsuleWorldMatrix);
+            appendLine(
+                lineList, 
+                MPoint(-b * radiusA - halfHeight, a * radiusA, 0.0), 
+                MPoint(-d * radiusA - halfHeight, c * radiusA, 0.0), 
+                capsuleWorldMatrix
+            );
 
             // XZ
-            appendLine(lineList, MPoint(-b - halfHeight, 0.0, a), MPoint(-d - halfHeight, 0.0, c), capsuleWorldMatrix);
+            appendLine(
+                lineList, 
+                MPoint(-b * radiusA - halfHeight, 0.0, a * radiusA), 
+                MPoint(-d * radiusA - halfHeight, 0.0, c * radiusA), 
+                capsuleWorldMatrix
+            );
             
         }
     }

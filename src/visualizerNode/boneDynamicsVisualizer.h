@@ -49,6 +49,7 @@ public:
     static MObject s_rotationOffset;
 
     // radius input (not scaled)
+    static MObject s_rootRadius; // radius at the root (used when boneAsCapsule is true)
     static MObject s_radius;
 
     // bone as a capsule
