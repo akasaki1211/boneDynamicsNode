@@ -17,7 +17,7 @@ MString boneDynamicsVisualizer::s_drawDbClassification("drawdb/geometry/boneDyna
 MString boneDynamicsVisualizer::s_drawRegistrantId("boneDynamicsNodePlugin");
 
 MObject boneDynamicsVisualizer::s_drawAngleLimit;
-MObject boneDynamicsVisualizer::s_drawCollisionRadius;
+MObject boneDynamicsVisualizer::s_drawBoneCollision;
 
 MObject boneDynamicsVisualizer::s_enable;
 
@@ -36,6 +36,8 @@ MObject boneDynamicsVisualizer::s_endScale;
 MObject boneDynamicsVisualizer::s_rotationOffset;
 
 MObject boneDynamicsVisualizer::s_radius;
+
+MObject boneDynamicsVisualizer::s_boneAsCapsule;
 
 MObject boneDynamicsVisualizer::s_angleLimit;
 MObject boneDynamicsVisualizer::s_angleConeSize;
@@ -70,7 +72,7 @@ MStatus boneDynamicsVisualizer::initialize()
     nAttr.setKeyable(true);
     nAttr.setAffectsAppearance(true);
 
-    s_drawCollisionRadius = nAttr.create("drawCollisionRadius", "dcr", MFnNumericData::kBoolean, true);
+    s_drawBoneCollision = nAttr.create("drawBoneCollision", "dbc", MFnNumericData::kBoolean, true);
     nAttr.setKeyable(true);
     nAttr.setAffectsAppearance(true);
 
@@ -147,6 +149,11 @@ MStatus boneDynamicsVisualizer::initialize()
     nAttr.setMin(0);
     nAttr.setAffectsAppearance(true);
 
+    // bone as a capsule
+    s_boneAsCapsule = nAttr.create("boneAsCapsule", "bac", MFnNumericData::kBoolean, false);
+    nAttr.setKeyable(true);
+    nAttr.setAffectsAppearance(true);
+
     s_angleLimit = nAttr.create("angleLimit", "al", MFnNumericData::kDouble, 60.0);
     nAttr.setKeyable(true);
     nAttr.setMin(0);
@@ -159,7 +166,7 @@ MStatus boneDynamicsVisualizer::initialize()
     nAttr.setAffectsAppearance(true);
 
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_drawAngleLimit));
-    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_drawCollisionRadius));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_drawBoneCollision));
 
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_enable));
 
@@ -178,6 +185,8 @@ MStatus boneDynamicsVisualizer::initialize()
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_rotationOffset));
 
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_radius));
+
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneAsCapsule));
 
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_angleLimit));
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_angleConeSize));
@@ -227,12 +236,13 @@ MUserData* visualizerDrawOverride::prepareForDraw(
     }
 
     // display switches
-    const bool drawCollisionRadius = visualizerGeometry::getBoolPlug(node, boneDynamicsVisualizer::s_drawCollisionRadius, false);
+    const bool drawBoneCollision = visualizerGeometry::getBoolPlug(node, boneDynamicsVisualizer::s_drawBoneCollision, false);
     const bool drawAngleLimit = visualizerGeometry::getBoolPlug(node, boneDynamicsVisualizer::s_drawAngleLimit, false);
     
     // get common data
     const bool enable = visualizerGeometry::getBoolPlug(node, boneDynamicsVisualizer::s_enable, true);
     const MVector outputRotate = visualizerGeometry::getVectorPlug(node, boneDynamicsVisualizer::s_outputRotate);
+    const bool boneAsCapsule = visualizerGeometry::getBoolPlug(node, boneDynamicsVisualizer::s_boneAsCapsule, false);
 
     // build bone input data
     boneDynamicsUtils::BoneInput boneInput;
@@ -250,7 +260,6 @@ MUserData* visualizerDrawOverride::prepareForDraw(
 
     // build pose data
     const boneDynamicsUtils::PoseData pose = boneDynamicsUtils::buildPoseData(boneInput);
-    //const double radius = pose.radius;
 
     // build matrices for visualization
     const MMatrix endMatrix = boneDynamicsUtils::buildSimulatedEndWorldMatrix(boneInput, outputRotate);
@@ -264,11 +273,22 @@ MUserData* visualizerDrawOverride::prepareForDraw(
     // -------------------------------------------------------
     // draw
     
-    drawData->radiusSphereLines.clear();
+    drawData->collisionLines.clear();
     
-    if (drawCollisionRadius && pose.radius > 0.0)
+    if (drawBoneCollision && pose.radius > 0.0)
     {
-        visualizerGeometry::appendRadiusSphere(drawData->radiusSphereLines, pose.radius, endMatrix);
+        if (boneAsCapsule)
+        {
+            // override translate to midpoint bone - end
+            MTransformationMatrix endTransformationMatrix(endMatrix);
+            const MVector endTranslate = endTransformationMatrix.getTranslation(MSpace::kWorld);
+            endTransformationMatrix.setTranslation((pose.boneWorldTranslate + endTranslate) * 0.5, MSpace::kWorld);
+            visualizerGeometry::appendCapsule(drawData->collisionLines, pose.radius, pose.radius, pose.distance, endTransformationMatrix.asMatrix());
+        }
+        else
+        {
+            visualizerGeometry::appendSphere(drawData->collisionLines, pose.radius, endMatrix);
+        }
     }
     
     drawData->angleLimitLines.clear();
@@ -307,14 +327,14 @@ if (!drawData)
     drawManager.setColor(drawData->color);
     drawManager.setDepthPriority(drawData->depthPriority);
 
+    if (drawData->collisionLines.length() > 0)
+    {
+        drawManager.mesh(MHWRender::MUIDrawManager::kLines, drawData->collisionLines);
+    }
+
     if (drawData->angleLimitLines.length() > 0)
     {
         drawManager.mesh(MHWRender::MUIDrawManager::kLines, drawData->angleLimitLines );
-    }
-
-    if (drawData->radiusSphereLines.length() > 0)
-    {
-        drawManager.mesh(MHWRender::MUIDrawManager::kLines, drawData->radiusSphereLines);
     }
 
     drawManager.endDrawable();

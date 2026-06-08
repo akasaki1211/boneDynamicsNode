@@ -25,7 +25,7 @@ public:
 
     // display switches
     static MObject s_drawAngleLimit;
-    static MObject s_drawCollisionRadius;
+    static MObject s_drawBoneCollision;
 
     // simulate enable
     static MObject s_enable;
@@ -50,6 +50,9 @@ public:
 
     // radius input (not scaled)
     static MObject s_radius;
+
+    // bone as a capsule
+    static MObject s_boneAsCapsule;
     
     // angle limit
     static MObject s_angleLimit;
