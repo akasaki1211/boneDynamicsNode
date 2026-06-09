@@ -145,7 +145,7 @@ private:
     DynamicsParameters getDynamicsParameters(MDataBlock& data) const;
     
     // simulate state
-    bool m_init;
+    bool m_isSimulationInitialized;
     MMatrix m_prevOffsetMatrix;
     MVector m_position;
     MVector m_velocity;

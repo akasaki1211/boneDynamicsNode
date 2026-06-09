@@ -349,7 +349,7 @@ MObject boneDynamicsNode::s_meshColCutoff;
 
 MObject boneDynamicsNode::s_outputRotate;
 
-boneDynamicsNode::boneDynamicsNode() : m_init(true), m_lastSeed(-1), m_lastFrame(-1) {
+boneDynamicsNode::boneDynamicsNode() : m_isSimulationInitialized(false), m_lastSeed(-1), m_lastFrame(-1) {
     m_rngState[0] = 0;
     m_rngState[1] = 0;
     m_rngState[2] = 0;
@@ -892,11 +892,11 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     const MTime& resetTime = data.inputValue(s_resetTime).asTime();
     
     // reset and initialization
-    if (time <= resetTime || m_init) {
+    if (time <= resetTime || !m_isSimulationInitialized) {
         m_prevOffsetMatrix = initialPose.offsetMatrix;
         m_position = initialPose.endWorldTranslate;
         m_velocity = MVector();
-        m_init = false;
+        m_isSimulationInitialized = true;
 
         if (dynamicsParams.enableTurbulence) {
             m_turbulenceVector = MVector();
