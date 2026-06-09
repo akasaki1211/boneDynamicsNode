@@ -69,6 +69,7 @@ namespace boneDynamicsUtils
         double boneParentScale[3];
         boneParentTransformationMatrix.getScale(boneParentScale, MSpace::kWorld);
         pose.radius = input.radius * input.endScale.z * boneInverseScale.z * boneParentScale[2]; // Specified by scale Z
+        pose.rootRadius = input.rootRadius * input.boneScale.z * boneInverseScale.z * boneParentScale[2]; // Specified by scale Z
 
         // bone length
         pose.distance = (pose.endWorldTranslate - pose.boneWorldTranslate).length();

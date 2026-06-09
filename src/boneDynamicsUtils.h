@@ -14,6 +14,7 @@ namespace boneDynamicsUtils
 {
     static constexpr MEulerRotation::RotationOrder kRotationOrder = MEulerRotation::RotationOrder::kXYZ;
     
+    // Input data from attributes
     struct BoneInput
     {
         MVector boneTranslate;
@@ -28,9 +29,11 @@ namespace boneDynamicsUtils
 
         MVector rotationOffset;
 
+        double rootRadius;
         double radius;
     };
 
+    // Calculated data such as matrices and positions
     struct PoseData
     {
         MEulerRotation rotationOffsetEuler; // used for reset and initialization
@@ -45,6 +48,7 @@ namespace boneDynamicsUtils
         MMatrix initialEndWorldMatrixExcludeRO; // used for disabled
         MMatrix initialEndWorldMatrix; // used for reset and initialization
         
+        double rootRadius;
         double radius;
         double distance;
     };
@@ -53,5 +57,6 @@ namespace boneDynamicsUtils
 
     PoseData buildPoseData(const BoneInput& input);
 
+    // used only in boneDynamivsVisualizer
     MMatrix buildSimulatedEndWorldMatrix(const BoneInput& input, const MVector& outputRotate);
 }

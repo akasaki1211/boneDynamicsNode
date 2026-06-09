@@ -14,11 +14,14 @@
 #include <maya/MPoint.h>
 #include <maya/MTransformationMatrix.h>
 
+#include <limits>    // std::numeric_limits
 #include <algorithm> // std::max, std::min
 #include <vector>    // std::vector
 
 namespace
 {
+    constexpr double kCapsuleMinThreshold = 0.1;
+
     /*double getFPS()
     {
         float fps = 24.0f;
@@ -84,36 +87,139 @@ namespace
         MVector normal;
     };
 
+    double getProjectionRatio(const MVector& a, const MVector& b, double minRatio = 0.0, double maxRatio = 1.0)
+    {
+        // projection of a to b
+
+        const double bLengthSq = b * b;
+        
+        if (bLengthSq <= 1e-8)
+        {
+            return minRatio;
+        }
+
+        const double t = (a * b) / bLengthSq;
+        return std::max(minRatio, std::min(t, maxRatio));
+    }
+
+    // sphere collision
     void solveSphereCollision(MVector& position, const SphereColliderData& sphereCol, double radius)
     {
-        MVector v = position - sphereCol.center;
-        double r = sphereCol.radius + radius;
+        const MVector v = position - sphereCol.center;
+        const double r = sphereCol.radius + radius;
         if (v * v < r * r)
         {
             position = sphereCol.center + (v.normal() * r);
         }
     }
 
-    void solveCapsuleCollision(MVector& position, const CapsuleColliderData& capsuleCol, double radius)
+    // sphere collision (bone as capsule ver)
+    void solveSphereCollision(MVector& position, const MVector& pivot, const SphereColliderData& sphereCol, double radius, double rootRadius)
     {
-        const MVector ab = capsuleCol.pointB - capsuleCol.pointA;
-        const double h = ab.length();
-        // TODO: Countermeasures for zero-length capsules
-        const MVector abNorm = ab / h;
+        const MVector u = position - pivot;
+        double t = getProjectionRatio((sphereCol.center - pivot), u, kCapsuleMinThreshold, 1.0);
+        const MVector p = pivot + t * u; // closest point
+        const MVector d = p - sphereCol.center;
 
-        const double t = abNorm * (position - capsuleCol.pointA);
-        const double ratio = std::max(0.0, std::min(t / h, 1.0));
-
-        const MVector closestPoint = capsuleCol.pointA + abNorm * (h * ratio);
+        const double boneRadius = rootRadius * (1.0 - t) + radius * t;
+        const double r = sphereCol.radius + boneRadius;
         
-        const MVector v = position - closestPoint;
-        const double r = radius + (capsuleCol.radiusA * (1.0 - ratio) + capsuleCol.radiusB * ratio);
-        if (v * v < r * r)
+        if (d * d < r * r)
         {
-            position = closestPoint + v.normal() * r;
+            const MVector dp = (sphereCol.center + d.normal() * r) - p; // delta p
+            position = position + (dp / t);
         }
     }
 
+    // capsule collision
+    void solveCapsuleCollision(MVector& position, const CapsuleColliderData& capsuleCol, double radius)
+    {
+        const MVector ab = capsuleCol.pointB - capsuleCol.pointA;
+        const double t = getProjectionRatio(position - capsuleCol.pointA, ab);
+        const MVector closestPoint = capsuleCol.pointA + ab * t;
+        const MVector d = position - closestPoint;
+        const double r = radius + (capsuleCol.radiusA * (1.0 - t) + capsuleCol.radiusB * t);
+        if (d * d < r * r)
+        {
+            position = closestPoint + d.normal() * r;
+        }
+    }
+
+    // capsule collision (bone as capsule ver)
+    void solveCapsuleCollision(MVector& position, const MVector& pivot, const CapsuleColliderData& capsuleCol, double radius, double rootRadius)
+    {
+        const MVector u = position - pivot;
+        const MVector v = capsuleCol.pointB - capsuleCol.pointA;
+        const MVector w = pivot - capsuleCol.pointA;
+
+        const double uu = u * u;
+        const double uv = u * v;
+        const double vv = v * v;
+        const double uw = u * w;
+        const double vw = v * w;
+
+        const double det = uu * vv - uv * uv; // if parallel, det=0
+        // TODO: Countermeasures for division by zero (det == 0)
+
+        double t1 = (uv * vw - vv * uw) / det;
+        double t2 = (uu * vw - uv * uw) / det;
+
+        MVector p;
+        MVector q;
+        
+        if (0.0 < t1 && t1 < 1.0 && 0.0 < t2 && t2 < 1.0)
+        {
+            // closest point is inside the lines
+            p = pivot + t1 * u; // closest point on bone
+            q = capsuleCol.pointA + t2 * v; // closest point on capsule
+        }
+        else
+        {
+            // closest point is outside the lines
+            double minLengthSq = std::numeric_limits<double>::infinity();
+
+            auto evaluateShortest = [&](double t1Temp, double t2Temp) {
+                const MVector pTemp = pivot + t1Temp * u;
+                const MVector qTemp = capsuleCol.pointA + t2Temp * v;
+                const double lengthSq = (qTemp - pTemp) * (qTemp - pTemp);
+
+                if (lengthSq < minLengthSq) {
+                    minLengthSq = lengthSq;
+                    p = pTemp;
+                    q = qTemp;
+                    t1 = t1Temp;
+                    t2 = t2Temp;
+                }
+            };
+
+            // t1 <= 0  ->  closest point is bone pivot
+            evaluateShortest(0.0, getProjectionRatio(pivot - capsuleCol.pointA, v));
+
+            // t1 >= 1  ->  closest point is bone end
+            evaluateShortest(1.0, getProjectionRatio(position - capsuleCol.pointA, v));
+
+            // t2 <= 0  ->  closest point is capsule pointA
+            evaluateShortest(getProjectionRatio(capsuleCol.pointA - pivot, u), 0.0);
+
+            // t2 >= 1  ->  closest point is capsule pointB
+            evaluateShortest(getProjectionRatio(capsuleCol.pointB - pivot, u), 1.0);
+        }
+
+        const double boneRadius = rootRadius * (1.0 - t1) + radius * t1;
+        const double capsuleRadius = capsuleCol.radiusA * (1.0 - t2) + capsuleCol.radiusB * t2;
+        const double r = boneRadius + capsuleRadius;
+
+        const MVector d = p - q;
+
+        if (d * d < r * r)
+        {
+            const MVector dp = (q + d.normal() * r) - p; // delta p
+            //position = position + (dp / t1);
+            position = position + (dp / std::max(kCapsuleMinThreshold, t1));
+        }
+    }
+
+    // infinite plane collision
     void solveInfinitePlaneCollision(MVector& position, const InfinitePlaneColliderData& iPlaneCol, double radius)
     {
         const double distancePointPlane = iPlaneCol.normal * (position - iPlaneCol.point);
@@ -123,12 +229,14 @@ namespace
         }
     }
 
+    // ground collision
     void solveGroundCollision(MVector& position, double groundHeight, double radius)
     {
         const double collisionHeight = groundHeight + radius;
         position[1] = position[1] < collisionHeight ? collisionHeight : position[1]; // Y-Up only
     }
 
+    // mesh collision
     void getClosestPoint(const MObject& mesh, const MPoint& point, MPoint& closestPoint, MVector& closestNormal)
     {
         // update closestPoint and closestNormal
@@ -208,7 +316,9 @@ MObject boneDynamicsNode::s_turbulenceVectorChangeMax;
 MObject boneDynamicsNode::s_enableAngleLimit;
 MObject boneDynamicsNode::s_angleLimit;
 
+MObject boneDynamicsNode::s_rootRadius;
 MObject boneDynamicsNode::s_radius;
+MObject boneDynamicsNode::s_boneAsCapsule;
 
 MObject boneDynamicsNode::s_iterations;
 
@@ -434,6 +544,10 @@ MStatus boneDynamicsNode::initialize()
     nAttr.setMax(360);
 
     // radius
+    s_rootRadius = nAttr.create("rootRadius", "rr", MFnNumericData::kDouble, 0.0); // TODO: Change to MFnUnitAttribute::kDistance
+    nAttr.setKeyable(true);
+    nAttr.setMin(0);
+
     s_radius = nAttr.create("radius", "r", MFnNumericData::kDouble, 0.0); // TODO: Change to MFnUnitAttribute::kDistance
     nAttr.setKeyable(true);
     nAttr.setMin(0);
@@ -445,6 +559,10 @@ MStatus boneDynamicsNode::initialize()
     nAttr.setMax(10);
 
     // collider attributes
+    // bone as a capsule
+    s_boneAsCapsule = nAttr.create("boneAsCapsule", "bac", MFnNumericData::kBoolean, false);
+    nAttr.setKeyable(true);
+
     // groundCollider
     s_enableGroundCol = nAttr.create("enableGroundCol", "gc", MFnNumericData::kBoolean, false);
     nAttr.setKeyable(true);
@@ -585,7 +703,10 @@ MStatus boneDynamicsNode::initialize()
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_enableAngleLimit));
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_angleLimit));
 
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_rootRadius));
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_radius));
+    CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_boneAsCapsule));
+
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_iterations));
 
     CHECK_MSTATUS_AND_RETURN_IT(addAttribute(s_enableGroundCol));
@@ -643,8 +764,9 @@ MStatus boneDynamicsNode::initialize()
         s_enableAngleLimit,
         s_angleLimit,
 
+        s_rootRadius,
         s_radius,
-
+        s_boneAsCapsule,
         s_iterations,
 
         s_enableGroundCol,
@@ -703,6 +825,7 @@ boneDynamicsNode::InitialPoseData boneDynamicsNode::buildInitialPoseData(MDataBl
 
     // radius input
     input.radius = data.inputValue(s_radius).asDouble();
+    input.rootRadius = data.inputValue(s_rootRadius).asDouble();
 
     // build pose data
     const boneDynamicsUtils::PoseData poseData = boneDynamicsUtils::buildPoseData(input);
@@ -913,6 +1036,9 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     const unsigned int mcCount = meshColArrayHandle.elementCount();
     const double meshColCutoff = data.inputValue(s_meshColCutoff).asDouble();
 
+    // bone as capsule
+    const bool boneAsCapsule = data.inputValue(s_boneAsCapsule).asBool();
+
     // number of iterations
     const long iter = data.inputValue(s_iterations).asLong();
 
@@ -1021,13 +1147,27 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         // sphere collision
         for (const SphereColliderData& sphereCol : sphereColliders)
         {
-            solveSphereCollision(nextPosition, sphereCol, initialPose.radius);
+            if (boneAsCapsule)
+            {
+                solveSphereCollision(nextPosition, initialPose.boneWorldTranslate, sphereCol, initialPose.radius, initialPose.rootRadius);
+            }
+            else
+            {
+                solveSphereCollision(nextPosition, sphereCol, initialPose.radius);
+            }
         }
 
         // capsule collision
         for (const CapsuleColliderData& capsuleCol : capsuleColliders)
         {
-            solveCapsuleCollision(nextPosition, capsuleCol, initialPose.radius);
+            if (boneAsCapsule)
+            {
+                solveCapsuleCollision(nextPosition, initialPose.boneWorldTranslate, capsuleCol, initialPose.radius, initialPose.rootRadius);
+            }
+            else
+            {
+                solveCapsuleCollision(nextPosition, capsuleCol, initialPose.radius);
+            }
         }
 
         // infinite plane collision

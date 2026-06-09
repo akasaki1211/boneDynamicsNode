@@ -132,7 +132,7 @@ namespace visualizerGeometry
         return matrixData.matrix(&status);
     }
     
-    void appendRadiusSphere(MPointArray& lineList, double radius, const MMatrix& sphereWorldMatrix, int segments)
+    void appendSphere(MPointArray& lineList, double radius, const MMatrix& sphereWorldMatrix, int segments)
     {
         radius = std::max(0.0, radius);
         segments = std::max(4, segments);
@@ -158,6 +158,103 @@ namespace visualizerGeometry
             
             // YZ
             appendLine(lineList, MPoint(0.0, a, b), MPoint(0.0, c, d), sphereWorldMatrix);
+        }
+    }
+
+    void appendCapsule(MPointArray& lineList, double radiusA, double radiusB, double height, const MMatrix& capsuleWorldMatrix, int segments)
+    {
+        radiusA = std::max(0.0, radiusA);
+        radiusB = std::max(0.0, radiusB);
+        height = std::max(0.0, height);
+        segments = std::max(4, segments);
+
+        const double pi = mathUtils::kPi;
+        const double halfHeight = height * 0.5;
+        const double doubleSegments = static_cast<double>(segments);
+
+        // body lines
+        for (int i = 0; i < 4; ++i)
+        {
+            const double theta = 2.0 * pi * static_cast<double>(i) / 4.0;
+            const double y = std::cos(theta);
+            const double z = std::sin(theta);
+
+            appendLine(
+                lineList, 
+                MPoint(-halfHeight, y * radiusA, z * radiusA), 
+                MPoint(halfHeight, y * radiusB, z * radiusB), 
+                capsuleWorldMatrix
+            );
+        }
+
+        // circle lines
+        for (int i = 0; i < segments; ++i)
+        {
+            const double theta1 = 2.0 * pi * static_cast<double>(i) / doubleSegments;
+            const double theta2 = 2.0 * pi * static_cast<double>(i + 1) / doubleSegments;
+
+            const double a = std::cos(theta1);
+            const double b = std::sin(theta1);
+            const double c = std::cos(theta2);
+            const double d = std::sin(theta2);
+
+            appendLine(
+                lineList, 
+                MPoint(halfHeight, a * radiusB, b * radiusB), 
+                MPoint(halfHeight, c * radiusB, d * radiusB), 
+                capsuleWorldMatrix
+            );
+            appendLine(
+                lineList, 
+                MPoint(-halfHeight, a * radiusA, b * radiusA), 
+                MPoint(-halfHeight, c * radiusA, d * radiusA), 
+                capsuleWorldMatrix
+            );
+        }
+
+        // hemisphere
+        for (int i = 0; i < segments / 2; ++i)
+        {
+            const double theta1 = 2.0 * pi * static_cast<double>(i) / doubleSegments;
+            const double theta2 = 2.0 * pi * static_cast<double>(i + 1) / doubleSegments;
+
+            const double a = std::cos(theta1);
+            const double b = std::sin(theta1);
+            const double c = std::cos(theta2);
+            const double d = std::sin(theta2);
+
+            // XY
+            appendLine(
+                lineList, 
+                MPoint(b * radiusB + halfHeight, a * radiusB, 0.0), 
+                MPoint(d * radiusB + halfHeight, c * radiusB, 0.0), 
+                capsuleWorldMatrix
+            );
+
+            // XZ
+            appendLine(
+                lineList, 
+                MPoint(b * radiusB + halfHeight, 0.0, a * radiusB), 
+                MPoint(d * radiusB + halfHeight, 0.0, c * radiusB), 
+                capsuleWorldMatrix
+            );
+
+            // XY
+            appendLine(
+                lineList, 
+                MPoint(-b * radiusA - halfHeight, a * radiusA, 0.0), 
+                MPoint(-d * radiusA - halfHeight, c * radiusA, 0.0), 
+                capsuleWorldMatrix
+            );
+
+            // XZ
+            appendLine(
+                lineList, 
+                MPoint(-b * radiusA - halfHeight, 0.0, a * radiusA), 
+                MPoint(-d * radiusA - halfHeight, 0.0, c * radiusA), 
+                capsuleWorldMatrix
+            );
+            
         }
     }
 

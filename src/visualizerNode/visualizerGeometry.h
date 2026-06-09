@@ -20,7 +20,7 @@ namespace visualizerGeometry
         VisualizerDrawData();
         virtual ~VisualizerDrawData() {}
 
-        MPointArray radiusSphereLines;
+        MPointArray collisionLines;
         MPointArray angleLimitLines;
         MColor color;
         unsigned int depthPriority;
@@ -32,10 +32,19 @@ namespace visualizerGeometry
     MVector getVectorPlug(const MObject& node, const MObject& attribute, const MVector& defaultValue = MVector::zero);
     MMatrix getMatrixPlug(const MObject& node, const MObject& attribute, const MMatrix& defaultValue = MMatrix::identity);
 
-    void appendRadiusSphere(
+    void appendSphere(
         MPointArray& lineList, 
         double radius, 
         const MMatrix& sphereWorldMatrix, 
+        int segments = kDefaultSegments
+    );
+
+    void appendCapsule(
+        MPointArray& lineList,
+        double radiusA, 
+        double radiusB, 
+        double height, 
+        const MMatrix& capsuleWorldMatrix,
         int segments = kDefaultSegments
     );
 
