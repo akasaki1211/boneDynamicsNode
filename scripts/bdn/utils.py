@@ -1,6 +1,7 @@
 from typing import Dict, Tuple, Sequence, Any
 import traceback
 import functools
+import re
 
 from maya import cmds
 
@@ -44,6 +45,12 @@ def load_plugin(*args) -> bool:
 
 def get_fps(*args) -> float:
     time_unit = cmds.currentUnit(q=True, time=True)
+    fps_match = re.match(r'^([0-9]+(?:\.[0-9]+)?)fps$', time_unit)
+    if fps_match:
+        fps = float(fps_match.group(1))
+        if fps > 0:
+            return fps
+
     fps_mapping = {
         'game': 15.0,
         'film': 24.0,
