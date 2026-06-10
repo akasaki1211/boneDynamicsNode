@@ -4,6 +4,24 @@ from maya import cmds
 from . import utils
 
 
+def _find_visualizer(bone_dynamics_node: str, *args):
+    dest = cmds.listConnections(bone_dynamics_node, s=False, d=True, type='boneDynamicsVisualizer') or []
+    if dest:
+        node = dest[0]
+        
+        if cmds.nodeType(node) == 'boneDynamicsVisualizer':
+            parents = cmds.listRelatives(node, p=True, f=False) or []
+            if parents:
+                return parents[0], node
+
+        shapes = cmds.listRelatives(node, s=True, f=False) or []
+        if shapes:
+            if cmds.nodeType(shapes[0]) == 'boneDynamicsVisualizer':
+                return node, shapes[0]
+
+    return None, None
+
+
 @utils.with_traceback
 @utils.undo_chunk
 def create_visualizer(bone_dynamics_node: str, **kwargs):
@@ -11,12 +29,9 @@ def create_visualizer(bone_dynamics_node: str, **kwargs):
     if not utils.load_plugin():
         raise RuntimeError("Failed to load boneDynamicsNode plugin.")
 
-    dest = cmds.listConnections(bone_dynamics_node, s=False, d=True, type='boneDynamicsVisualizer')
+    visualizer_tm, visualizer_shape = _find_visualizer(bone_dynamics_node)
     
-    if dest:
-        visualizer_shape = dest[0]
-        visualizer_tm = cmds.listRelatives(visualizer_shape, parent=True, fullPath=False)[0]
-    else:
+    if visualizer_shape is None:
         visualizer_tm, visualizer_shape = utils.create_shape_node('boneDynamicsVisualizer')
     
     utils.set_outliner_color(visualizer_tm, (0, .5, 1))
