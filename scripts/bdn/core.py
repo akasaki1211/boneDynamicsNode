@@ -34,12 +34,14 @@ def create_dynamics_node(
         raise ValueError("Exit: Both bone and end must be joints.")
 
     # check parent-child relationship
-    end_parents = cmds.listRelatives(end, p=True)
+    bone_full_paths = cmds.ls(bone, l=True) or []
+    bone_path = bone_full_paths[0] if bone_full_paths else bone
+    end_parents = cmds.listRelatives(end, p=True, f=True)
     
     if not end_parents:
         raise ValueError(f"Exit: {end} has no parent.")
     
-    if not bone in end_parents: # TODO: Handle a fullpath being provided
+    if bone_path not in end_parents:
         raise ValueError(f"Exit: {bone} is not {end}'s parent.")
     
     # create boneDynamicsNode and set attributes
