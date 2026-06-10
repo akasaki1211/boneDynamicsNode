@@ -22,6 +22,13 @@ def _find_visualizer(bone_dynamics_node: str, *args):
     return None, None
 
 
+def _connect_attr(source: str, destination: str, *args) -> None:
+    connected_sources = cmds.listConnections(destination, s=True, d=False, p=True) or []
+    if source in connected_sources:
+        return
+    cmds.connectAttr(source, destination, f=True)
+
+
 @utils.with_traceback
 @utils.undo_chunk
 def create_visualizer(bone_dynamics_node: str, **kwargs):
@@ -59,6 +66,6 @@ def create_visualizer(bone_dynamics_node: str, **kwargs):
     ]
 
     for src_attr, dst_attr in cons:
-        cmds.connectAttr(f'{bone_dynamics_node}.{src_attr}', f'{visualizer_shape}.{dst_attr}', f=True)
+        _connect_attr(f'{bone_dynamics_node}.{src_attr}', f'{visualizer_shape}.{dst_attr}')
 
     return visualizer_tm, visualizer_shape

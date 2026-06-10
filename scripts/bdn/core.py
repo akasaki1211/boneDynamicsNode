@@ -75,9 +75,6 @@ def create_dynamics_node(
             vp = vp[0]
         else:
             vp = cmds.createNode('vectorProduct')
-            #cmds.setAttr(f'{vp}.operation', 3)
-            #cmds.setAttr(f'{vp}.input1', additional_force_init_vec[0], additional_force_init_vec[1], additional_force_init_vec[2], type='double3')
-            #cmds.setAttr(f'{vp}.normalizeOutput', 1)
             attrs = {
                 "operation": 3,
                 "input1": additional_force_init_vec,
