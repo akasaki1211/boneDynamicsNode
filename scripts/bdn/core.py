@@ -4,10 +4,6 @@ from maya import cmds
 
 from . import utils, collider, visualize
 
-__all__ = [
-    'create_dynamics_node'
-]
-
 
 @utils.with_traceback
 @utils.undo_chunk

@@ -79,6 +79,7 @@ def create_shape_node(node_name: str, *args) -> Tuple[str, str]:
 def set_attributes(node: str, **attributes: Dict[str, Any]) -> None:
     for at, v in attributes.items():
         if not cmds.attributeQuery(at, n=node, ex=True):
+            print(f"Attribute does not exist: {node}.{at}")
             continue
         try:
             if type(v) == str:
