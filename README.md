@@ -21,8 +21,10 @@
 ## 🔧 Quick Installation
 
 1. Download the appropriate `boneDynamicsNode.mll` for the Maya version from the [Releases page](https://github.com/akasaki1211/boneDynamicsNode/releases) or from [Pre-built plug-ins](#-pre-built-plug-ins).
-2. Copy it to `C:\Users\<USERNAME>\Documents\maya\<MAYAVERSION>\plug-ins`.
-3. Load `boneDynamicsNode.mll` using Maya's Plug-in Manager.
+2. Copy `boneDynamicsNode.mll` to `C:\Users\<USERNAME>\Documents\maya\<MAYAVERSION>\plug-ins`.
+3. Copy the `scripts\bdn` folder to `C:\Users\<USERNAME>\Documents\maya\scripts\bdn` to use the Python helper module.
+4. Copy `scripts\AEboneDynamicsNodeTemplate.mel` to `C:\Users\<USERNAME>\Documents\maya\scripts` to use the Attribute Editor template.
+5. Load `boneDynamicsNode.mll` using Maya's Plug-in Manager.
 
 For additional instructions, refer to the [Installation](https://github.com/akasaki1211/boneDynamicsNode/wiki/Installation) wiki page.
 
