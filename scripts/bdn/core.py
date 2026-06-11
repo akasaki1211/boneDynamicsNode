@@ -1,4 +1,4 @@
-from typing import List, Sequence, Optional
+from typing import List, Sequence, Optional, Union
 
 from maya import cmds
 
@@ -18,9 +18,9 @@ def create_dynamics_node(
         target_bone: Optional[str] = None, 
         offset_node: Optional[str] = None, 
         create_visualizer: bool = False,
-        colliders: Optional[List[str]] = None,
+        colliders: Optional[Union[str, Sequence[str]]] = None,
         additional_force_node: Optional[str] = None,
-        additional_force_init_vec: Sequence[float] = [0, 0, -1],
+        additional_force_init_vec: Sequence[float] = (0, 0, -1),
         set_name: str = 'boneDynamicsNodeSet',
         **kwargs
     ) -> str:
@@ -93,6 +93,10 @@ def create_dynamics_node(
 
     # colliders
     if colliders is not None:
+        if isinstance(colliders, str):
+            colliders = [colliders]
+        else:
+            colliders = list(colliders)
         collider.connect_colliders(bone_dynamics_node, colliders, replace=True)
 
     # add to object set

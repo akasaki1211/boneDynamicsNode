@@ -88,6 +88,9 @@ def connect_colliders(
     if not colliders:
         return
     
+    if not isinstance(colliders, list):
+        return
+
     if replace:
         disconnect_colliders(bone_dynamics_node)
     
@@ -109,8 +112,7 @@ def connect_colliders(
             print(f"Skip: {col} is not found.")
             continue
 
-        skip1 = False
-        skip2 = False
+        is_found = False
 
         col_shape = cmds.listRelatives(col, s=True, f=True)
 
@@ -122,7 +124,7 @@ def connect_colliders(
                 cmds.connectAttr(f'{col}.worldMatrix[0]', f'{bone_dynamics_node}.sphereCollider[{sphere_col_idx}].sphereColMatrix', f=True)
                 cmds.connectAttr(f'{col_shape}.radius', f'{bone_dynamics_node}.sphereCollider[{sphere_col_idx}].sphereColRadius', f=True)
                 sphere_col_idx += 1
-                continue
+                is_found = True
 
             elif col_node_type == 'capsuleColliderNode':
                 cmds.connectAttr(f'{col}.worldMatrix[0]', f'{bone_dynamics_node}.capsuleColliderInput[{capsule_col_input_idx}].capsuleColliderMatrix', f=True)
@@ -130,21 +132,21 @@ def connect_colliders(
                 cmds.connectAttr(f'{col_shape}.radiusA', f'{bone_dynamics_node}.capsuleColliderInput[{capsule_col_input_idx}].capsuleColliderRadiusA', f=True)
                 cmds.connectAttr(f'{col_shape}.radiusB', f'{bone_dynamics_node}.capsuleColliderInput[{capsule_col_input_idx}].capsuleColliderRadiusB', f=True)
                 capsule_col_input_idx += 1
-                continue
+                is_found = True
 
             elif col_node_type == 'infinitePlaneColliderNode':
                 cmds.connectAttr(f'{col}.worldMatrix[0]', f'{bone_dynamics_node}.infinitePlaneCollider[{iplane_col_idx}].infinitePlaneColMatrix', f=True)
                 iplane_col_idx += 1
-                continue
+                is_found = True
 
             # mesh collider
             elif col_node_type == 'mesh':
                 cmds.connectAttr(f'{col_shape}.worldMesh[0]', f'{bone_dynamics_node}.meshCollider[{mesh_col_idx}]', f=True)
                 mesh_col_idx += 1
-                continue
+                is_found = True
 
-            else:
-                skip1 = True
+        if is_found:
+            continue
 
         # expcol-type colliders
         if cmds.attributeQuery('colliderType', n=col, ex=True):
@@ -155,27 +157,28 @@ def connect_colliders(
                 cmds.connectAttr(f'{col}.worldMatrix[0]', f'{bone_dynamics_node}.sphereCollider[{sphere_col_idx}].sphereColMatrix', f=True)
                 cmds.connectAttr(f'{col}.radius', f'{bone_dynamics_node}.sphereCollider[{sphere_col_idx}].sphereColRadius', f=True)
                 sphere_col_idx += 1
-                continue
+                is_found = True
             
             elif collider_type in ['capsule', 'capsule2']:
                 ra = ".radius" if collider_type == 'capsule' else ".radiusA"
                 rb = ".radius" if collider_type == 'capsule' else ".radiusB"
-                a = cmds.listConnections(f'{col}.sphereA', d=0)[0]
-                b = cmds.listConnections(f'{col}.sphereB', d=0)[0]
+                a = cmds.listConnections(f'{col}.sphereA', s=True, d=False) or []
+                b = cmds.listConnections(f'{col}.sphereB', s=True, d=False) or []
+                if not a or not b:
+                    continue
+                a = a[0]
+                b = b[0]
                 cmds.connectAttr(f'{a}.worldMatrix[0]', f'{bone_dynamics_node}.capsuleCollider[{capsule_col_idx}].capsuleColMatrixA', f=True)
                 cmds.connectAttr(f'{b}.worldMatrix[0]', f'{bone_dynamics_node}.capsuleCollider[{capsule_col_idx}].capsuleColMatrixB', f=True)
                 cmds.connectAttr(f'{col}{ra}', f'{bone_dynamics_node}.capsuleCollider[{capsule_col_idx}].capsuleColRadiusA', f=True)
                 cmds.connectAttr(f'{col}{rb}', f'{bone_dynamics_node}.capsuleCollider[{capsule_col_idx}].capsuleColRadiusB', f=True)
                 capsule_col_idx += 1
-                continue
+                is_found = True
             
             elif collider_type == 'infinitePlane':
                 cmds.connectAttr(f'{col}.worldMatrix[0]', f'{bone_dynamics_node}.infinitePlaneCollider[{iplane_col_idx}].infinitePlaneColMatrix', f=True)
                 iplane_col_idx += 1
-                continue
+                is_found = True
 
-            else:
-                skip2 = True
-
-        if skip1 and skip2:
+        if not is_found:
             print(f"Skip: {col} is not a supported collider type.")
