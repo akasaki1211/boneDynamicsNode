@@ -1,4 +1,4 @@
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Sequence, Union
 
 from maya import cmds
 
@@ -80,7 +80,7 @@ def disconnect_colliders(
 @utils.undo_chunk
 def connect_colliders(
         bone_dynamics_node: str, 
-        colliders: List[str], 
+        colliders: Union[str, Sequence[str]],
         replace: bool = False,
         *args
     ) -> None:
@@ -88,8 +88,10 @@ def connect_colliders(
     if not colliders:
         return
     
-    if not isinstance(colliders, list):
-        return
+    if isinstance(colliders, str):
+        colliders = [colliders]
+    else:
+        colliders = list(colliders)
 
     if replace:
         disconnect_colliders(bone_dynamics_node)
