@@ -60,7 +60,7 @@ def get_fps(*args) -> float:
         'palf': 50.0,
         'ntscf': 60.0
     }
-    return fps_mapping.get(time_unit, 24.0)
+    return fps_mapping.get(time_unit, 30.0)
 
 
 @with_traceback

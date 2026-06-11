@@ -46,7 +46,10 @@ def create_dynamics_node(
     
     # create boneDynamicsNode and set attributes
     bone_dynamics_node = cmds.createNode("boneDynamicsNode")
-    utils.set_attributes(bone_dynamics_node, fps=utils.get_fps(), **kwargs)
+    attributes = dict(kwargs)
+    if 'fps' not in attributes:
+        attributes['fps'] = utils.get_fps()
+    utils.set_attributes(bone_dynamics_node, **attributes)
 
     # basic connections
     cmds.connectAttr('time1.outTime', f'{bone_dynamics_node}.time', f=True)
