@@ -63,19 +63,32 @@ def get_fps(*args) -> float:
     return fps_mapping.get(time_unit, 30.0)
 
 
-@with_traceback
-@undo_chunk
 def create_shape_node(node_name: str, *args) -> Tuple[str, str]:
-    shape = cmds.createNode(node_name, name=f"{node_name}Shape")
-    transform = cmds.listRelatives(shape, parent=True, fullPath=False)[0]
-    if not transform.startswith(node_name):
-        transform = cmds.rename(transform, node_name)
+    
+    def _unique_name(name):
+        i = 1
+        while True:
+            if cmds.objExists(f'{name}{i}'):
+                i += 1
+            else:
+                break
+        return f'{name}{i}'
+
+    transform_unique_name = _unique_name(node_name)
+
+    shape = cmds.createNode(node_name, name=_unique_name(f"{node_name}Shape"))
+    transform_fullpath = cmds.listRelatives(shape, p=True, f=True)[0]
+    transform = transform_fullpath.split('|')[-1]
+
+    if transform != transform_unique_name:
+        transform = cmds.rename(transform_fullpath, transform_unique_name)
+        shape = cmds.listRelatives(transform, s=True, f=True)[0]
+
     shape = cmds.rename(shape, transform + "Shape")
+
     return transform, shape
 
 
-@with_traceback
-@undo_chunk
 def set_attributes(node: str, **attributes: Dict[str, Any]) -> None:
     for at, v in attributes.items():
         if not cmds.attributeQuery(at, n=node, ex=True):
@@ -94,23 +107,17 @@ def set_attributes(node: str, **attributes: Dict[str, Any]) -> None:
             print(f"Failed to set attribute: {node}.{at}")
 
 
-@with_traceback
-@undo_chunk
 def set_outliner_color(node: str, color: Sequence[float], *args) -> None:
     cmds.setAttr(f'{node}.useOutlinerColor', True)
     cmds.setAttr(f'{node}.outlinerColor', color[0], color[1], color[2])
 
 
-@with_traceback
-@undo_chunk
 def set_override_display_color(node: str, color_idx: int, *args) -> None:
     cmds.setAttr(f'{node}.overrideEnabled', True)
     cmds.setAttr(f'{node}.overrideRGBColors', False)
     cmds.setAttr(f'{node}.overrideColor', color_idx)
 
 
-@with_traceback
-@undo_chunk
 def set_override_display_type(node: str, type: str, *args) -> None:
     if type == 'Reference':
         display_type = 2
@@ -123,8 +130,6 @@ def set_override_display_type(node: str, type: str, *args) -> None:
     cmds.setAttr(f'{node}.overrideDisplayType', display_type)
 
 
-@with_traceback
-@undo_chunk
 def add_object_to_set(obj: str, set_name: str, *args) -> None:
     
     if not set_name:
