@@ -18,13 +18,14 @@
 - Turbulent wind
 - Support for branching structures
 
-## 🔧 Quick Installation
+## 🔧 Installation
 
-1. Download the appropriate `boneDynamicsNode.mll` for the Maya version from the [Releases page](https://github.com/akasaki1211/boneDynamicsNode/releases) or from [Pre-built plug-ins](#-pre-built-plug-ins).
-2. Copy `boneDynamicsNode.mll` to `C:\Users\<USERNAME>\Documents\maya\<MAYAVERSION>\plug-ins`.
-3. Copy the `scripts\bdn` folder to `C:\Users\<USERNAME>\Documents\maya\scripts\bdn` to use the Python helper module.
-4. Copy `scripts\AEboneDynamicsNodeTemplate.mel` to `C:\Users\<USERNAME>\Documents\maya\scripts` to use the Attribute Editor template.
-5. Load `boneDynamicsNode.mll` using Maya's Plug-in Manager.
+1. Download the appropriate `boneDynamicsNode.mll` for the Maya version from [Pre-built plug-ins](#-pre-built-plug-ins).  
+2. Copy `boneDynamicsNode.mll` to `C:\Users\<USERNAME>\Documents\maya\<MAYAVERSION>\plug-ins`.  
+3. Copy [`scripts`](./scripts) into `C:\Users\<USERNAME>\Documents\maya`.  
+   This installs both the `bdn` Python helper package and `AEboneDynamicsNodeTemplate.mel`.  
+
+The `bdn` helper package loads `boneDynamicsNode.mll` automatically when needed.  
 
 For additional instructions, refer to the [Installation](https://github.com/akasaki1211/boneDynamicsNode/wiki/Installation) wiki page.
 
@@ -75,4 +76,4 @@ Pre-built `boneDynamicsNode.mll` in the [plug-ins](./plug-ins) directory. Instal
 |Maya 2024 Update 2 win64|[Download](./plug-ins/2024/boneDynamicsNode.mll)|
 |Maya 2025 Update 3 win64|[Download](./plug-ins/2025/boneDynamicsNode.mll)|
 |Maya 2026 Update 3 win64|[Download](./plug-ins/2026/boneDynamicsNode.mll)|
-|Maya 2027 win64|[Download](./plug-ins/2027/boneDynamicsNode.mll)|
+|Maya 2027 Update 1 win64|[Download](./plug-ins/2027/boneDynamicsNode.mll)|
