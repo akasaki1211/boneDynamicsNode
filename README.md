@@ -35,20 +35,12 @@ Please try running the following script. It creates a single-section joint with 
 ```python
 from maya import cmds
 
-cmds.loadPlugin("boneDynamicsNode.mll", qt=True)
-
 cmds.select(cl=True)
 bon = cmds.joint(p=[0,0,0])
 end = cmds.joint(p=[10,0,0])
 
-bd_node = cmds.createNode("boneDynamicsNode")
-cmds.connectAttr('time1.outTime', f'{bd_node}.time', f=True)
-cmds.connectAttr(f'{bon}.translate', f'{bd_node}.boneTranslate', f=True)
-cmds.connectAttr(f'{bon}.parentMatrix[0]', f'{bd_node}.boneParentMatrix', f=True)
-cmds.connectAttr(f'{bon}.parentInverseMatrix[0]', f'{bd_node}.boneParentInverseMatrix', f=True)
-cmds.connectAttr(f'{bon}.jointOrient', f'{bd_node}.boneJointOrient', f=True)
-cmds.connectAttr(f'{end}.translate', f'{bd_node}.endTranslate', f=True)
-cmds.connectAttr(f'{bd_node}.outputRotate', f'{bon}.rotate', f=True)
+import bdn
+bdn.create_dynamics_node(bon, end)
 
 cmds.currentTime(1)
 cmds.select(bon)
