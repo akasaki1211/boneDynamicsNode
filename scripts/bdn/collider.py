@@ -69,11 +69,57 @@ def disconnect_colliders(
         ]
     
     for col_attr in collider_attributes:
-        indexes = cmds.getAttr(f'{bone_dynamics_node}.{col_attr}', mi=True)
-        if indexes is None:
+        indices = cmds.getAttr(f'{bone_dynamics_node}.{col_attr}', mi=True)
+        if indices is None:
             continue
-        for idx in indexes:
+        for idx in indices:
             cmds.removeMultiInstance(f'{bone_dynamics_node}.{col_attr}[{idx}]', b=True)
+
+
+class _ColliderConnector:
+    
+    def __init__(self, bone_dynamics_node: str):
+        self.bone_dynamics_node: str = bone_dynamics_node
+        self._update_indices()
+
+    def _update_indices(self):
+        
+        def _get_next_index(attr: str) -> int:
+            indices = cmds.getAttr(f'{self.bone_dynamics_node}.{attr}', mi=True)
+            return max(indices) + 1 if indices else 0
+        
+        self.sphere_col_idx: int = _get_next_index('sphereCollider')
+        self.capsule_col_idx: int = _get_next_index('capsuleCollider')
+        self.capsule_col_input_idx: int = _get_next_index('capsuleColliderInput')
+        self.iplane_col_idx: int = _get_next_index('infinitePlaneCollider')
+        self.mesh_col_idx: int = _get_next_index('meshCollider')
+    
+    def connect_sphere(self, matrix_attr: str, radius_attr: str) -> None:
+        cmds.connectAttr(matrix_attr, f'{self.bone_dynamics_node}.sphereCollider[{self.sphere_col_idx}].sphereColMatrix', f=True)
+        cmds.connectAttr(radius_attr, f'{self.bone_dynamics_node}.sphereCollider[{self.sphere_col_idx}].sphereColRadius', f=True)
+        self.sphere_col_idx += 1
+
+    def connect_capsule_input(self, matrix_attr: str, height_attr: str, radius_a_attr: str, radius_b_attr: str) -> None:
+        cmds.connectAttr(matrix_attr, f'{self.bone_dynamics_node}.capsuleColliderInput[{self.capsule_col_input_idx}].capsuleColliderMatrix', f=True)
+        cmds.connectAttr(height_attr, f'{self.bone_dynamics_node}.capsuleColliderInput[{self.capsule_col_input_idx}].capsuleColliderHeight', f=True)
+        cmds.connectAttr(radius_a_attr, f'{self.bone_dynamics_node}.capsuleColliderInput[{self.capsule_col_input_idx}].capsuleColliderRadiusA', f=True)
+        cmds.connectAttr(radius_b_attr, f'{self.bone_dynamics_node}.capsuleColliderInput[{self.capsule_col_input_idx}].capsuleColliderRadiusB', f=True)
+        self.capsule_col_input_idx += 1
+
+    def connect_capsule(self, matrix_a_attr: str, matrix_b_attr: str, radius_a_attr: str, radius_b_attr: str) -> None:
+        cmds.connectAttr(matrix_a_attr, f'{self.bone_dynamics_node}.capsuleCollider[{self.capsule_col_idx}].capsuleColMatrixA', f=True)
+        cmds.connectAttr(matrix_b_attr, f'{self.bone_dynamics_node}.capsuleCollider[{self.capsule_col_idx}].capsuleColMatrixB', f=True)
+        cmds.connectAttr(radius_a_attr, f'{self.bone_dynamics_node}.capsuleCollider[{self.capsule_col_idx}].capsuleColRadiusA', f=True)
+        cmds.connectAttr(radius_b_attr, f'{self.bone_dynamics_node}.capsuleCollider[{self.capsule_col_idx}].capsuleColRadiusB', f=True)
+        self.capsule_col_idx += 1
+
+    def connect_infinite_plane(self, matrix_attr: str) -> None:
+        cmds.connectAttr(matrix_attr, f'{self.bone_dynamics_node}.infinitePlaneCollider[{self.iplane_col_idx}].infinitePlaneColMatrix', f=True)
+        self.iplane_col_idx += 1
+
+    def connect_mesh(self, mesh_attr: str) -> None:
+        cmds.connectAttr(mesh_attr, f'{self.bone_dynamics_node}.meshCollider[{self.mesh_col_idx}]', f=True)
+        self.mesh_col_idx += 1
 
 
 @utils.with_traceback
@@ -95,17 +141,8 @@ def connect_colliders(
 
     if replace:
         disconnect_colliders(bone_dynamics_node)
-    
-    # define indexes
-    def get_next_index(node: str, attr: str, *args):
-        indexes = cmds.getAttr(f'{node}.{attr}', mi=True)
-        return max(indexes) + 1 if indexes else 0
-    
-    sphere_col_idx = get_next_index(bone_dynamics_node, 'sphereCollider')
-    capsule_col_idx = get_next_index(bone_dynamics_node, 'capsuleCollider')
-    capsule_col_input_idx = get_next_index(bone_dynamics_node, 'capsuleColliderInput')
-    iplane_col_idx = get_next_index(bone_dynamics_node, 'infinitePlaneCollider')
-    mesh_col_idx = get_next_index(bone_dynamics_node, 'meshCollider')
+
+    connector = _ColliderConnector(bone_dynamics_node)
 
     # collider loop
     for col in colliders:
@@ -123,28 +160,19 @@ def connect_colliders(
             col_node_type = cmds.nodeType(col_shape)
             
             if col_node_type == 'sphereColliderNode':
-                cmds.connectAttr(f'{col}.worldMatrix[0]', f'{bone_dynamics_node}.sphereCollider[{sphere_col_idx}].sphereColMatrix', f=True)
-                cmds.connectAttr(f'{col_shape}.radius', f'{bone_dynamics_node}.sphereCollider[{sphere_col_idx}].sphereColRadius', f=True)
-                sphere_col_idx += 1
+                connector.connect_sphere(f'{col}.worldMatrix[0]', f'{col_shape}.radius')
                 is_found = True
 
             elif col_node_type == 'capsuleColliderNode':
-                cmds.connectAttr(f'{col}.worldMatrix[0]', f'{bone_dynamics_node}.capsuleColliderInput[{capsule_col_input_idx}].capsuleColliderMatrix', f=True)
-                cmds.connectAttr(f'{col_shape}.height', f'{bone_dynamics_node}.capsuleColliderInput[{capsule_col_input_idx}].capsuleColliderHeight', f=True)
-                cmds.connectAttr(f'{col_shape}.radiusA', f'{bone_dynamics_node}.capsuleColliderInput[{capsule_col_input_idx}].capsuleColliderRadiusA', f=True)
-                cmds.connectAttr(f'{col_shape}.radiusB', f'{bone_dynamics_node}.capsuleColliderInput[{capsule_col_input_idx}].capsuleColliderRadiusB', f=True)
-                capsule_col_input_idx += 1
+                connector.connect_capsule_input(f'{col}.worldMatrix[0]', f'{col_shape}.height', f'{col_shape}.radiusA', f'{col_shape}.radiusB')
                 is_found = True
 
             elif col_node_type == 'infinitePlaneColliderNode':
-                cmds.connectAttr(f'{col}.worldMatrix[0]', f'{bone_dynamics_node}.infinitePlaneCollider[{iplane_col_idx}].infinitePlaneColMatrix', f=True)
-                iplane_col_idx += 1
+                connector.connect_infinite_plane(f'{col}.worldMatrix[0]')
                 is_found = True
 
-            # mesh collider
             elif col_node_type == 'mesh':
-                cmds.connectAttr(f'{col_shape}.worldMesh[0]', f'{bone_dynamics_node}.meshCollider[{mesh_col_idx}]', f=True)
-                mesh_col_idx += 1
+                connector.connect_mesh(f'{col_shape}.worldMesh[0]')
                 is_found = True
 
         if is_found:
@@ -156,9 +184,7 @@ def connect_colliders(
             collider_type = cmds.getAttr(f'{col}.colliderType')
             
             if collider_type == 'sphere':
-                cmds.connectAttr(f'{col}.worldMatrix[0]', f'{bone_dynamics_node}.sphereCollider[{sphere_col_idx}].sphereColMatrix', f=True)
-                cmds.connectAttr(f'{col}.radius', f'{bone_dynamics_node}.sphereCollider[{sphere_col_idx}].sphereColRadius', f=True)
-                sphere_col_idx += 1
+                connector.connect_sphere(f'{col}.worldMatrix[0]', f'{col}.radius')
                 is_found = True
             
             elif collider_type in ['capsule', 'capsule2']:
@@ -167,19 +193,15 @@ def connect_colliders(
                 a = cmds.listConnections(f'{col}.sphereA', s=True, d=False) or []
                 b = cmds.listConnections(f'{col}.sphereB', s=True, d=False) or []
                 if not a or not b:
+                    print(f"Skip: {col} capsule collider is missing sphereA or sphereB connection.")
                     continue
                 a = a[0]
                 b = b[0]
-                cmds.connectAttr(f'{a}.worldMatrix[0]', f'{bone_dynamics_node}.capsuleCollider[{capsule_col_idx}].capsuleColMatrixA', f=True)
-                cmds.connectAttr(f'{b}.worldMatrix[0]', f'{bone_dynamics_node}.capsuleCollider[{capsule_col_idx}].capsuleColMatrixB', f=True)
-                cmds.connectAttr(f'{col}{ra}', f'{bone_dynamics_node}.capsuleCollider[{capsule_col_idx}].capsuleColRadiusA', f=True)
-                cmds.connectAttr(f'{col}{rb}', f'{bone_dynamics_node}.capsuleCollider[{capsule_col_idx}].capsuleColRadiusB', f=True)
-                capsule_col_idx += 1
+                connector.connect_capsule(f'{a}.worldMatrix[0]', f'{b}.worldMatrix[0]', f'{col}{ra}', f'{col}{rb}')
                 is_found = True
             
             elif collider_type == 'infinitePlane':
-                cmds.connectAttr(f'{col}.worldMatrix[0]', f'{bone_dynamics_node}.infinitePlaneCollider[{iplane_col_idx}].infinitePlaneColMatrix', f=True)
-                iplane_col_idx += 1
+                connector.connect_infinite_plane(f'{col}.worldMatrix[0]')
                 is_found = True
 
         if not is_found:
