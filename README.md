@@ -18,11 +18,14 @@
 - Turbulent wind
 - Support for branching structures
 
-## 🔧 Quick Installation
+## 🔧 Installation
 
-1. Download the appropriate `boneDynamicsNode.mll` for the Maya version from the [Releases page](https://github.com/akasaki1211/boneDynamicsNode/releases) or from [Pre-built plug-ins](#-pre-built-plug-ins).
-2. Copy it to `C:\Users\<USERNAME>\Documents\maya\<MAYAVERSION>\plug-ins`.
-3. Load `boneDynamicsNode.mll` using Maya's Plug-in Manager.
+1. Download the appropriate `boneDynamicsNode.mll` for the Maya version from [Pre-built plug-ins](#-pre-built-plug-ins).  
+2. Copy `boneDynamicsNode.mll` to `C:\Users\<USERNAME>\Documents\maya\<MAYAVERSION>\plug-ins`.  
+3. Copy [`scripts`](./scripts) into `C:\Users\<USERNAME>\Documents\maya`.  
+   This installs both the `bdn` Python helper package and `AEboneDynamicsNodeTemplate.mel`.  
+
+The `bdn` helper package loads `boneDynamicsNode.mll` automatically when needed.  
 
 For additional instructions, refer to the [Installation](https://github.com/akasaki1211/boneDynamicsNode/wiki/Installation) wiki page.
 
@@ -33,20 +36,12 @@ Please try running the following script. It creates a single-section joint with 
 ```python
 from maya import cmds
 
-cmds.loadPlugin("boneDynamicsNode.mll", qt=True)
-
 cmds.select(cl=True)
 bon = cmds.joint(p=[0,0,0])
 end = cmds.joint(p=[10,0,0])
 
-bd_node = cmds.createNode("boneDynamicsNode")
-cmds.connectAttr('time1.outTime', f'{bd_node}.time', f=True)
-cmds.connectAttr(f'{bon}.translate', f'{bd_node}.boneTranslate', f=True)
-cmds.connectAttr(f'{bon}.parentMatrix[0]', f'{bd_node}.boneParentMatrix', f=True)
-cmds.connectAttr(f'{bon}.parentInverseMatrix[0]', f'{bd_node}.boneParentInverseMatrix', f=True)
-cmds.connectAttr(f'{bon}.jointOrient', f'{bd_node}.boneJointOrient', f=True)
-cmds.connectAttr(f'{end}.translate', f'{bd_node}.endTranslate', f=True)
-cmds.connectAttr(f'{bd_node}.outputRotate', f'{bon}.rotate', f=True)
+import bdn
+bdn.create_dynamics_node(bon, end)
 
 cmds.currentTime(1)
 cmds.select(bon)
@@ -81,4 +76,4 @@ Pre-built `boneDynamicsNode.mll` in the [plug-ins](./plug-ins) directory. Instal
 |Maya 2024 Update 2 win64|[Download](./plug-ins/2024/boneDynamicsNode.mll)|
 |Maya 2025 Update 3 win64|[Download](./plug-ins/2025/boneDynamicsNode.mll)|
 |Maya 2026 Update 3 win64|[Download](./plug-ins/2026/boneDynamicsNode.mll)|
-|Maya 2027 win64|[Download](./plug-ins/2027/boneDynamicsNode.mll)|
+|Maya 2027 Update 1 win64|[Download](./plug-ins/2027/boneDynamicsNode.mll)|
