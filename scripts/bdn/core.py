@@ -20,6 +20,24 @@ def create_dynamics_node(
         set_name: str = 'boneDynamicsNodeSet',
         **kwargs
     ) -> str:
+    """Create and connect a boneDynamicsNode for a joint section.
+
+    Args:
+        bone: Joint driven by the created dynamics node.
+        end: Tip joint that defines the end of the simulated section.
+        scalable: Connect scale attributes when the joint should per-section scaling.
+        target_bone: Optional node whose drives the rotation offset.
+        offset_node: Optional node whose offsets the simulation space.
+        create_visualizer: Create and connect a visualizer.
+        colliders: Collider transform name, or sequence of names.
+        additional_force_node: Optional node whose world matrix controls additional force direction.
+        additional_force_init_vec: Initial vector that controlled by additional_force_node.
+        set_name: Object set that store the created dynamics node.
+        **kwargs: Attribute values to set on the created boneDynamicsNode.
+
+    Returns:
+        The created boneDynamicsNode name.
+    """
 
     # load plugin
     if not utils.load_plugin():

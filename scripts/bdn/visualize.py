@@ -32,6 +32,15 @@ def _connect_attr(source: str, destination: str, *args) -> None:
 @utils.with_traceback
 @utils.undo_chunk
 def create_visualizer(bone_dynamics_node: str, **kwargs):
+    """Create a viewport visualizer for a boneDynamicsNode.
+
+    Args:
+        bone_dynamics_node: Source boneDynamicsNode to visualize.
+        **kwargs: Attribute values to set on the visualizer shape.
+
+    Returns:
+        A tuple containing the visualizer transform name and shape name.
+    """
 
     if not utils.load_plugin():
         raise RuntimeError("Failed to load boneDynamicsNode plugin.")
