@@ -8,6 +8,14 @@ from . import utils
 @utils.with_traceback
 @utils.undo_chunk
 def create_sphere_collider(radius: float = 1.0, *args, **kwargs) -> Tuple[str, str]:
+    """Create a sphere collider.
+
+    Args:
+        radius: Initial value for the collider shape's radius attribute.
+
+    Returns:
+        A tuple containing the transform name and shape name.
+    """
     
     if not utils.load_plugin():
         raise RuntimeError("Failed to load boneDynamicsNode plugin.")
@@ -23,6 +31,16 @@ def create_sphere_collider(radius: float = 1.0, *args, **kwargs) -> Tuple[str, s
 @utils.with_traceback
 @utils.undo_chunk
 def create_capsule_collider(height: float = 1.0, radius_a: float = 1.0, radius_b: float = 1.0, *args, **kwargs) -> Tuple[str, str]:
+    """Create a capsule collider.
+
+    Args:
+        height: Initial value for the collider shape's height attribute.
+        radius_a: Initial radius at the first capsule end.
+        radius_b: Initial radius at the second capsule end.
+
+    Returns:
+        A tuple containing the transform name and shape name.
+    """
 
     if not utils.load_plugin():
         raise RuntimeError("Failed to load boneDynamicsNode plugin.")
@@ -40,6 +58,11 @@ def create_capsule_collider(height: float = 1.0, radius_a: float = 1.0, radius_b
 @utils.with_traceback
 @utils.undo_chunk
 def create_infinite_plane_collider(*args, **kwargs) -> Tuple[str, str]:
+    """Create an infinite plane collider.
+
+    Returns:
+        A tuple containing the transform name and shape name.
+    """
 
     if not utils.load_plugin():
         raise RuntimeError("Failed to load boneDynamicsNode plugin.")
@@ -58,6 +81,13 @@ def disconnect_colliders(
         collider_attributes: Optional[List[str]] = None, 
         *args
     ) -> None:
+    """Remove collider connections from a boneDynamicsNode.
+
+    Args:
+        bone_dynamics_node: boneDynamicsNode to disconnect from colliders.
+        collider_attributes: Multi attributes to clear.
+            When omitted, all supported collider attributes are cleared.
+    """
 
     if collider_attributes is None:
         collider_attributes = [
@@ -130,6 +160,17 @@ def connect_colliders(
         replace: bool = False,
         *args
     ) -> None:
+    """Connect supported collider nodes to a boneDynamicsNode.
+
+    Args:
+        bone_dynamics_node: boneDynamicsNode that receives collider inputs.
+        colliders: Collider transform name, mesh transform name, or sequence of names.
+        replace: Disconnect existing collider inputs before connecting the given colliders.
+
+    Notes:
+        Supported inputs include bdn sphere, capsule, and infinite-plane collider transforms, 
+            mesh transforms, and expcol collider nodes.
+    """
 
     if not colliders:
         return
