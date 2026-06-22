@@ -584,24 +584,24 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     }
 
     // offset matrix
-    const MMatrix& offsetMatrix = data.inputValue(s_offsetMatrix).asMatrix();
+    const MMatrix offsetMatrix = data.inputValue(s_offsetMatrix).asMatrix();
     const double offsetMatrixWeight = data.inputValue(s_offsetMatrixWeight).asDouble();
 
     // bone
-    const MVector& boneTranslate = data.inputValue(s_boneTranslate).asVector();
-    const MVector& boneJointOrient = data.inputValue(s_boneJointOrient).asVector();
-    const MMatrix& boneParentMatrix = data.inputValue(s_boneParentMatrix).asMatrix();
-    const MMatrix& boneParentInverseMatrix = data.inputValue(s_boneParentInverseMatrix).asMatrix();
-    const MVector& boneScale = data.inputValue(s_boneScale).asVector();
-    const MVector& boneInverseScaleInput = data.inputValue(s_boneInverseScale).asVector();
+    const MVector boneTranslate = data.inputValue(s_boneTranslate).asVector();
+    const MVector boneJointOrient = data.inputValue(s_boneJointOrient).asVector();
+    const MMatrix boneParentMatrix = data.inputValue(s_boneParentMatrix).asMatrix();
+    const MMatrix boneParentInverseMatrix = data.inputValue(s_boneParentInverseMatrix).asMatrix();
+    const MVector boneScale = data.inputValue(s_boneScale).asVector();
+    const MVector boneInverseScaleInput = data.inputValue(s_boneInverseScale).asVector();
     const MVector boneInverseScale(1.0 / boneInverseScaleInput.x, 1.0 / boneInverseScaleInput.y, 1.0 / boneInverseScaleInput.z);
     
     // end
-    const MVector& endTranslate = data.inputValue(s_endTranslate).asVector();
-    const MVector& endScale = data.inputValue(s_endScale).asVector();
+    const MVector endTranslate = data.inputValue(s_endTranslate).asVector();
+    const MVector endScale = data.inputValue(s_endScale).asVector();
 
     // rotation offset
-    const MVector& rotationOffset = data.inputValue(s_rotationOffset).asVector();
+    const MVector rotationOffset = data.inputValue(s_rotationOffset).asVector();
 
     // rotation offset matrix
     const MEulerRotation rotationOffsetEuler(rotationOffset, ROTATION_ORDER);
@@ -645,9 +645,9 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     const double elasticity = data.inputValue(s_elasticity).asDouble();
     const double stiffness = data.inputValue(s_stiffness).asDouble();
     const double mass = data.inputValue(s_mass).asDouble();
-    const MVector& gravity = data.inputValue(s_gravity).asVector();
+    const MVector gravity = data.inputValue(s_gravity).asVector();
     const double gravityMultiply = data.inputValue(s_gravityMultiply).asDouble();
-    const MVector& additionalForce = data.inputValue(s_additionalForce).asVector();
+    const MVector additionalForce = data.inputValue(s_additionalForce).asVector();
     const double additionalForceScale = data.inputValue(s_additionalForceScale).asDouble();
     
     const MTime& time = data.inputValue(s_time).asTime();
