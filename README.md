@@ -80,4 +80,4 @@ Pre-built `boneDynamicsNode.mll` in the [plug-ins](./plug-ins) directory. Instal
 |Maya 2024 Update 2 win64|[Download](./plug-ins/2024/boneDynamicsNode.mll)|
 |Maya 2025 Update 3 win64|[Download](./plug-ins/2025/boneDynamicsNode.mll)|
 |Maya 2026 Update 3 win64|[Download](./plug-ins/2026/boneDynamicsNode.mll)|
-|Maya 2027 win64|[Download](./plug-ins/2027/boneDynamicsNode.mll)|
+|Maya 2027 Update 1 win64|[Download](./plug-ins/2027/boneDynamicsNode.mll)|
