@@ -570,7 +570,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     }
 
     // output data handles
-    MDataHandle& outputRotateHandle = data.outputValue(s_outputRotate);
+    MDataHandle outputRotateHandle = data.outputValue(s_outputRotate);
     
     const bool enable = data.inputValue(s_enable).asBool();
     if (!enable)
@@ -788,16 +788,16 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     const bool enableGroundCol = data.inputValue(s_enableGroundCol).asBool();
     const double groundHeight = data.inputValue(s_groundHeight).asDouble();
 
-    MArrayDataHandle& sphereColArrayHandle = data.inputArrayValue(s_sphereCollider);
+    MArrayDataHandle sphereColArrayHandle = data.inputArrayValue(s_sphereCollider);
     const unsigned int scCount = sphereColArrayHandle.elementCount();
         
-    MArrayDataHandle& capsuleColArrayHandle = data.inputArrayValue(s_capsuleCollider);
+    MArrayDataHandle capsuleColArrayHandle = data.inputArrayValue(s_capsuleCollider);
     const unsigned int ccCount = capsuleColArrayHandle.elementCount();
         
-    MArrayDataHandle& iPlaneColArrayHandle = data.inputArrayValue(s_iPlaneCollider);
+    MArrayDataHandle iPlaneColArrayHandle = data.inputArrayValue(s_iPlaneCollider);
     const unsigned int pcCount = iPlaneColArrayHandle.elementCount();
 
-    MArrayDataHandle& meshColArrayHandle = data.inputArrayValue(s_meshCollider);
+    MArrayDataHandle meshColArrayHandle = data.inputArrayValue(s_meshCollider);
     const unsigned int mcCount = meshColArrayHandle.elementCount();
     const double meshColCutoff = data.inputValue(s_meshColCutoff).asDouble();
     
@@ -820,7 +820,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     MVector v;
     double r;
 
-    const long iter = data.inputValue(s_iterations).asLong();
+    const int iter = data.inputValue(s_iterations).asInt();
 
     for (int i = 0; i < iter; i++)
     {
@@ -830,7 +830,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         //sphere collision
         for (unsigned int i = 0; i < scCount; i++) {
             sphereColArrayHandle.jumpToArrayElement(i);
-            MDataHandle& sphereCollider = sphereColArrayHandle.inputValue();
+            MDataHandle sphereCollider = sphereColArrayHandle.inputValue();
             sphereCol_m = sphereCollider.child(s_sphereColMtx).asMatrix();
             sphereCol_p = sphereCol_m.getTranslation(MSpace::kWorld);
             sphereCol_m.getScale(sphereCol_s, MSpace::kWorld);
@@ -847,7 +847,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         //capsule collision
         for (unsigned int i = 0; i < ccCount; i++) {
             capsuleColArrayHandle.jumpToArrayElement(i);
-            MDataHandle& capsuleCollider = capsuleColArrayHandle.inputValue();
+            MDataHandle capsuleCollider = capsuleColArrayHandle.inputValue();
             capsuleCol_mA = capsuleCollider.child(s_capsuleColMtxA).asMatrix();
             capsuleCol_pA = capsuleCol_mA.getTranslation(MSpace::kWorld);
             capsuleCol_mB = capsuleCollider.child(s_capsuleColMtxB).asMatrix();
@@ -894,7 +894,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         //infinite plane collision
         for (unsigned int i = 0; i < pcCount; i++) {
             iPlaneColArrayHandle.jumpToArrayElement(i);
-            MDataHandle& iPlaneCollider = iPlaneColArrayHandle.inputValue();
+            MDataHandle iPlaneCollider = iPlaneColArrayHandle.inputValue();
             iPlaneCol_m = iPlaneCollider.child(s_iPlaneColMtx).asMatrix();
             iPlaneCol_p = iPlaneCol_m.getTranslation(MSpace::kWorld);
             iPlaneCol_n = MVector::yAxis.transformAsNormal(iPlaneCol_m.asMatrix()); // Specified by y-axis
@@ -909,7 +909,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         //mesh collision (experimental)
         for (unsigned int i = 0; i < mcCount; i++) {
             meshColArrayHandle.jumpToArrayElement(i);
-            MDataHandle& meshCollider = meshColArrayHandle.inputValue();
+            MDataHandle meshCollider = meshColArrayHandle.inputValue();
             meshCol = meshCollider.asMesh();
 
             // Get the closest point and closest normal on a mesh
