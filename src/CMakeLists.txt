@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.12)
 
 project(boneDynamicsNode)
 
@@ -37,3 +37,23 @@ set(LIBRARIES
 find_opengl()
 
 build_plugin()
+
+
+# conformance settings
+if(DEFINED CXX_STANDARD_VER AND NOT CXX_STANDARD_VER STREQUAL "")
+   set_target_properties(${PROJECT_NAME} PROPERTIES
+      CXX_STANDARD ${CXX_STANDARD_VER}
+      CXX_STANDARD_REQUIRED YES
+      CXX_EXTENSIONS NO
+   )
+endif()
+
+if(MSVC)
+   target_compile_options(${PROJECT_NAME} PRIVATE
+      /permissive-
+      #/W4
+      #/Zc:preprocessor
+      /Zc:__cplusplus
+      /utf-8
+   )
+endif()
