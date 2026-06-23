@@ -553,7 +553,7 @@ MStatus boneDynamicsNode::initialize()
     nAttr.setMin(0);
 
     // constraint attributes
-    s_iterations = nAttr.create("iterations", "iter", MFnNumericData::kLong, 5);
+    s_iterations = nAttr.create("iterations", "iter", MFnNumericData::kInt, 5);
     nAttr.setKeyable(true);
     nAttr.setMin(0);
     nAttr.setMax(10);
@@ -869,7 +869,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     }
 
     // output data handles
-    MDataHandle& outputRotateHandle = data.outputValue(s_outputRotate);
+    MDataHandle outputRotateHandle = data.outputValue(s_outputRotate);
     
     // check enable
     const bool enable = data.inputValue(s_enable).asBool();
@@ -888,8 +888,8 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     DynamicsParameters dynamicsParams = getDynamicsParameters(data);
 
     // time
-    const MTime& time = data.inputValue(s_time).asTime();
-    const MTime& resetTime = data.inputValue(s_resetTime).asTime();
+    const MTime time = data.inputValue(s_time).asTime();
+    const MTime resetTime = data.inputValue(s_resetTime).asTime();
     
     // reset and initialization
     if (time <= resetTime || !m_isSimulationInitialized) {
@@ -1020,19 +1020,19 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     const bool enableGroundCol = data.inputValue(s_enableGroundCol).asBool();
     const double groundHeight = data.inputValue(s_groundHeight).asDouble();
 
-    MArrayDataHandle& sphereColArrayHandle = data.inputArrayValue(s_sphereCollider);
+    MArrayDataHandle sphereColArrayHandle = data.inputArrayValue(s_sphereCollider);
     const unsigned int scCount = sphereColArrayHandle.elementCount();
         
-    MArrayDataHandle& capsuleColArrayHandle = data.inputArrayValue(s_capsuleCollider);
+    MArrayDataHandle capsuleColArrayHandle = data.inputArrayValue(s_capsuleCollider);
     const unsigned int ccCount = capsuleColArrayHandle.elementCount();
 
-    MArrayDataHandle& capsuleColiderInputArrayHandle = data.inputArrayValue(s_capsuleColliderInput);
+    MArrayDataHandle capsuleColiderInputArrayHandle = data.inputArrayValue(s_capsuleColliderInput);
     const unsigned int cciCount = capsuleColiderInputArrayHandle.elementCount();
         
-    MArrayDataHandle& iPlaneColArrayHandle = data.inputArrayValue(s_iPlaneCollider);
+    MArrayDataHandle iPlaneColArrayHandle = data.inputArrayValue(s_iPlaneCollider);
     const unsigned int pcCount = iPlaneColArrayHandle.elementCount();
 
-    MArrayDataHandle& meshColArrayHandle = data.inputArrayValue(s_meshCollider);
+    MArrayDataHandle meshColArrayHandle = data.inputArrayValue(s_meshCollider);
     const unsigned int mcCount = meshColArrayHandle.elementCount();
     const double meshColCutoff = data.inputValue(s_meshColCutoff).asDouble();
 
@@ -1040,7 +1040,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     const bool boneAsCapsule = data.inputValue(s_boneAsCapsule).asBool();
 
     // number of iterations
-    const long iter = data.inputValue(s_iterations).asLong();
+    const int iter = data.inputValue(s_iterations).asInt();
 
     // Prepare collider data vectors
     std::vector<SphereColliderData> sphereColliders(scCount);
@@ -1053,7 +1053,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         // sphere collider
         for (unsigned int scIdx = 0; scIdx < scCount; ++scIdx) {
             CHECK_MSTATUS_AND_RETURN_IT(sphereColArrayHandle.jumpToArrayElement(scIdx));
-            MDataHandle& sphereCollider = sphereColArrayHandle.inputValue();
+            MDataHandle sphereCollider = sphereColArrayHandle.inputValue();
             const MTransformationMatrix sphereColMatrix = sphereCollider.child(s_sphereColMtx).asMatrix();
             const MVector sphereColPosition = sphereColMatrix.getTranslation(MSpace::kWorld);
             double sphereColScale[3];
@@ -1070,7 +1070,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         // capsule collider (Using two end matrices)
         for (unsigned int ccIdx = 0; ccIdx < ccCount; ++ccIdx) {
             CHECK_MSTATUS_AND_RETURN_IT(capsuleColArrayHandle.jumpToArrayElement(ccIdx));
-            MDataHandle& capsuleCollider = capsuleColArrayHandle.inputValue();
+            MDataHandle capsuleCollider = capsuleColArrayHandle.inputValue();
             const MTransformationMatrix capsuleColMatrixA = capsuleCollider.child(s_capsuleColMtxA).asMatrix();
             const MVector capsuleColPositionA = capsuleColMatrixA.getTranslation(MSpace::kWorld);
             const MTransformationMatrix capsuleColMatrixB = capsuleCollider.child(s_capsuleColMtxB).asMatrix();
@@ -1092,7 +1092,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         // capsule collider (Using one center matrix and height)
         for (unsigned int cciIdx = 0; cciIdx < cciCount; ++cciIdx) {
             CHECK_MSTATUS_AND_RETURN_IT(capsuleColiderInputArrayHandle.jumpToArrayElement(cciIdx));
-            MDataHandle& capsuleColliderInput = capsuleColiderInputArrayHandle.inputValue();
+            MDataHandle capsuleColliderInput = capsuleColiderInputArrayHandle.inputValue();
             
             const MMatrix capsuleColMatrix = capsuleColliderInput.child(s_capsuleColliderMatrix).asMatrix();
             const MTransformationMatrix capsuleColTransfomMatrix(capsuleColMatrix);
@@ -1118,7 +1118,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         // infinite plane collider
         for (unsigned int pcIdx = 0; pcIdx < pcCount; ++pcIdx) {
             CHECK_MSTATUS_AND_RETURN_IT(iPlaneColArrayHandle.jumpToArrayElement(pcIdx));
-            MDataHandle& iPlaneCollider = iPlaneColArrayHandle.inputValue();
+            MDataHandle iPlaneCollider = iPlaneColArrayHandle.inputValue();
             const MTransformationMatrix iPlaneColMatrix = iPlaneCollider.child(s_iPlaneColMtx).asMatrix();
             const MVector iPlaneColPosition = iPlaneColMatrix.getTranslation(MSpace::kWorld);
             const MVector iPlaneColNormal = MVector::yAxis.transformAsNormal(iPlaneColMatrix.asMatrix()); // Specified by y-axis
@@ -1133,7 +1133,7 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
         // mesh collider
         for (unsigned int mcIdx = 0; mcIdx < mcCount; ++mcIdx) {
             CHECK_MSTATUS_AND_RETURN_IT(meshColArrayHandle.jumpToArrayElement(mcIdx));
-            MDataHandle& meshCollider = meshColArrayHandle.inputValue();
+            MDataHandle meshCollider = meshColArrayHandle.inputValue();
             meshColliders[mcIdx] = meshCollider.asMesh();
         }
     }
