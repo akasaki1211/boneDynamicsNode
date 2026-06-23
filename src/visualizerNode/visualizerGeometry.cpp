@@ -21,7 +21,7 @@ namespace
 
 namespace visualizerGeometry
 {
-    VisualizerDrawData::VisualizerDrawData() : MUserData(false),
+    VisualizerDrawData::VisualizerDrawData() : MUserData(),
         color(1.0f, 1.0f, 1.0f),
         depthPriority(MHWRender::MRenderItem::sDormantWireDepthPriority)
     {}

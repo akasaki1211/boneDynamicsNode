@@ -10,7 +10,7 @@
 
 namespace colliderGeometry
 {
-    ColliderDrawData::ColliderDrawData() : MUserData(false), 
+    ColliderDrawData::ColliderDrawData() : MUserData(),
         color(1.0f, 1.0f, 1.0f), 
         depthPriority(MHWRender::MRenderItem::sDormantWireDepthPriority)
     {}
