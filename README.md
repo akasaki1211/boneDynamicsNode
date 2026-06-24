@@ -11,6 +11,8 @@
 
 - Simple integration with standard Maya joints
 - Multiple collision types supported (sphere, capsule, infinite plane, ground, mesh)
+- Dedicated collider nodes and visualizer node
+- Python helper package for scripted setup
 - Angle limitation
 - Specify target pose
 - Cancel transforms of specific nodes
@@ -28,6 +30,12 @@
 The `bdn` helper package loads `boneDynamicsNode.mll` automatically when needed.  
 
 For additional instructions, refer to the [Installation](https://github.com/akasaki1211/boneDynamicsNode/wiki/Installation) wiki page.
+
+## 🖥️ Platform Status
+
+- **Windows:** Developed and tested on Windows. Pre-built plug-ins are provided for Windows.
+- **Linux:** Build verified under WSL. Runtime testing in Maya on Linux has not been performed.
+- **macOS:** Not tested.
 
 ## 🚀 Try it out
 
