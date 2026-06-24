@@ -38,6 +38,7 @@ for bone, end in zip(joints[:-1], joints[1:]):
         end, 
         scalable=True,                      # Enable per-section scaling.
         target_bone=f'{bone}_target',       # The target posture is manipulated using a joint-chain in which "{bone}_target".
+        connect_target_scale=True,          # Connect scale from the target joint.
         offset_node="offset",               # Name of the node to offset the transform.
         create_visualizer=True,             # Create viewport visualizers.
         colliders=colliders,                # List of collider names.

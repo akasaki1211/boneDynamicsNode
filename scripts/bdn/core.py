@@ -12,6 +12,7 @@ def create_dynamics_node(
         end: str, 
         scalable: bool = False, 
         target_bone: Optional[str] = None, 
+        connect_target_scale: Optional[bool] = False,
         offset_node: Optional[str] = None, 
         create_visualizer: bool = False,
         colliders: Optional[Union[str, Sequence[str]]] = None,
@@ -27,6 +28,9 @@ def create_dynamics_node(
         end: Tip joint that defines the end of the simulated section.
         scalable: Connect scale attributes when the joint should per-section scaling.
         target_bone: Optional node whose drives the rotation offset.
+        connect_target_scale: Connect the scale from target_bone to bone.
+            If the target pose is controlled using a duplicate joint, it is convenient 
+            to connect the scale from the duplicate joint as well.
         offset_node: Optional node whose offsets the simulation space.
         create_visualizer: Create and connect a visualizer.
         colliders: Collider transform name, or sequence of names.
@@ -82,6 +86,8 @@ def create_dynamics_node(
     # additional connections
     if target_bone and cmds.objExists(target_bone):
         cmds.connectAttr(f'{target_bone}.rotate', f'{bone_dynamics_node}.rotationOffset', f=True)
+        if connect_target_scale:
+            cmds.connectAttr(f'{target_bone}.scale', f'{bone}.scale', f=True)
 
     if offset_node and cmds.objExists(offset_node):
         cmds.connectAttr(f'{offset_node}.worldMatrix[0]', f'{bone_dynamics_node}.offsetMatrix', f=True)
