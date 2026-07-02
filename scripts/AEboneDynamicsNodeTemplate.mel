@@ -58,7 +58,7 @@ global proc AEboneDynamicsNodeTemplate(string $nodeName)
             editorTemplate -endLayout;
 
             editorTemplate -beginLayout "Collisions" -collapse true;
-                editorTemplate -label "rootRadius (*with boneAsCapsule)" -addControl "rootRadius";
+                editorTemplate -addControl "rootRadius";
                 editorTemplate -addControl "radius";
                 editorTemplate -label "Bone as Capsule (*Experimental)" -addControl "boneAsCapsule";
                 editorTemplate -addControl "iterations";
