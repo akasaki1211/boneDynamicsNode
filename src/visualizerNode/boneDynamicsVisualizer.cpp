@@ -64,6 +64,14 @@ void* boneDynamicsVisualizer::creator()
 
 MStatus boneDynamicsVisualizer::initialize()
 {
+    // TODO(unit): Convert boneDynamicsNode length-like inputs to distance attributes as one migration. 
+    // Required:
+    // - boneTranslate / endTranslate
+    // - radius / rootRadius
+    // - collider radius / height inputs
+    // - groundHeight / meshColCutoff
+    // Solver internals should using centimeters via asCentimeters().
+
     MFnNumericAttribute nAttr;
     MFnUnitAttribute uAttr;
     MFnMatrixAttribute mAttr;
@@ -145,11 +153,11 @@ MStatus boneDynamicsVisualizer::initialize()
     nAttr.setKeyable(true);
     nAttr.setAffectsAppearance(true);
 
-    s_rootRadius = nAttr.create("rootRadius", "rr", MFnNumericData::kDouble, 1.0); // TODO: Change to MFnUnitAttribute::kDistance
+    s_rootRadius = nAttr.create("rootRadius", "rr", MFnNumericData::kDouble, 1.0);
     nAttr.setKeyable(true);
     nAttr.setMin(0);
     nAttr.setAffectsAppearance(true);
-    s_radius = nAttr.create("radius", "r", MFnNumericData::kDouble, 1.0); // TODO: Change to MFnUnitAttribute::kDistance
+    s_radius = nAttr.create("radius", "r", MFnNumericData::kDouble, 1.0);
     nAttr.setKeyable(true);
     nAttr.setMin(0);
     nAttr.setAffectsAppearance(true);

@@ -389,6 +389,14 @@ void boneDynamicsNode::getCacheSetup(const MEvaluationNode& evalNode, MNodeCache
 
 MStatus boneDynamicsNode::initialize()
 {
+    // TODO(unit): Convert boneDynamicsNode length-like inputs to distance attributes as one migration. 
+    // Required:
+    // - boneTranslate / endTranslate
+    // - radius / rootRadius
+    // - collider radius / height inputs
+    // - groundHeight / meshColCutoff
+    // Solver internals should using centimeters via asCentimeters().
+
     MFnNumericAttribute nAttr;
     MFnCompoundAttribute cmpAttr;
     MFnMatrixAttribute mAttr;
@@ -544,11 +552,11 @@ MStatus boneDynamicsNode::initialize()
     nAttr.setMax(360);
 
     // radius
-    s_rootRadius = nAttr.create("rootRadius", "rr", MFnNumericData::kDouble, 0.0); // TODO: Change to MFnUnitAttribute::kDistance
+    s_rootRadius = nAttr.create("rootRadius", "rr", MFnNumericData::kDouble, 0.0);
     nAttr.setKeyable(true);
     nAttr.setMin(0);
 
-    s_radius = nAttr.create("radius", "r", MFnNumericData::kDouble, 0.0); // TODO: Change to MFnUnitAttribute::kDistance
+    s_radius = nAttr.create("radius", "r", MFnNumericData::kDouble, 0.0);
     nAttr.setKeyable(true);
     nAttr.setMin(0);
 
