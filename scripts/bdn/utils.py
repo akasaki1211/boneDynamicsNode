@@ -1,0 +1,142 @@
+from typing import Dict, Tuple, Sequence, Any
+import traceback
+import functools
+import re
+
+from maya import cmds
+
+# decorator
+def undo_chunk(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        cmds.undoInfo(openChunk=True)
+        try:
+            result = func(*args, **kwargs)
+        finally:
+            cmds.undoInfo(closeChunk=True)
+        return result
+    return wrapper
+
+
+def with_traceback(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception:
+            print(f"Error occurred in '{func.__name__}'")
+            traceback.print_exc()
+            raise
+    return wrapper
+
+
+# utils
+def load_plugin(*args) -> bool:
+    try:
+        result = cmds.loadPlugin("boneDynamicsNode.mll", qt=True)
+        if result is not None:
+            plugin_ver = cmds.pluginInfo("boneDynamicsNode.mll", q=True, version=True)
+            print(f"Plugin loaded successfully. Version: {plugin_ver}")
+        return True
+    except Exception as e:
+        print(f"Error loading plugin: {e}")
+        return False
+
+
+def get_fps(*args) -> float:
+    time_unit = cmds.currentUnit(q=True, time=True)
+    fps_match = re.match(r'^([0-9]+(?:\.[0-9]+)?)fps$', time_unit)
+    if fps_match:
+        fps = float(fps_match.group(1))
+        if fps > 0:
+            return fps
+
+    fps_mapping = {
+        'game': 15.0,
+        'film': 24.0,
+        'pal': 25.0,
+        'ntsc': 30.0,
+        'show': 48.0,
+        'palf': 50.0,
+        'ntscf': 60.0
+    }
+    return fps_mapping.get(time_unit, 30.0)
+
+
+def create_shape_node(node_name: str, *args) -> Tuple[str, str]:
+    
+    def _unique_name(name):
+        i = 1
+        while True:
+            if cmds.objExists(f'{name}{i}'):
+                i += 1
+            else:
+                break
+        return f'{name}{i}'
+
+    transform_unique_name = _unique_name(node_name)
+
+    shape = cmds.createNode(node_name, name=_unique_name(f"{node_name}Shape"))
+    transform_fullpath = cmds.listRelatives(shape, p=True, f=True)[0]
+    transform = transform_fullpath.split('|')[-1]
+
+    if transform != transform_unique_name:
+        transform = cmds.rename(transform_fullpath, transform_unique_name)
+        shape = cmds.listRelatives(transform, s=True, f=True)[0]
+
+    shape = cmds.rename(shape, transform + "Shape")
+
+    return transform, shape
+
+
+def set_attributes(node: str, **attributes: Dict[str, Any]) -> None:
+    for at, v in attributes.items():
+        if not cmds.attributeQuery(at, n=node, ex=True):
+            print(f"Attribute does not exist: {node}.{at}")
+            continue
+        try:
+            if type(v) == str:
+                cmds.setAttr(f"{node}.{at}", v, type="string")
+            
+            elif (type(v) == list or type(v) == tuple) and len(v) >= 3:
+                cmds.setAttr(f"{node}.{at}", v[0], v[1], v[2], type="double3")
+            
+            else:
+                cmds.setAttr(f"{node}.{at}", v)
+        except:
+            print(f"Failed to set attribute: {node}.{at}")
+
+
+def set_outliner_color(node: str, color: Sequence[float], *args) -> None:
+    cmds.setAttr(f'{node}.useOutlinerColor', True)
+    cmds.setAttr(f'{node}.outlinerColor', color[0], color[1], color[2])
+
+
+def set_override_display_color(node: str, color_idx: int, *args) -> None:
+    cmds.setAttr(f'{node}.overrideEnabled', True)
+    cmds.setAttr(f'{node}.overrideRGBColors', False)
+    cmds.setAttr(f'{node}.overrideColor', color_idx)
+
+
+def set_override_display_type(node: str, type: str, *args) -> None:
+    if type == 'Reference':
+        display_type = 2
+    elif type == 'Template':
+        display_type = 1
+    else :
+        display_type = 0
+
+    set_override_display_color(node, 0)
+    cmds.setAttr(f'{node}.overrideDisplayType', display_type)
+
+
+def add_object_to_set(obj: str, set_name: str, *args) -> None:
+    
+    if not set_name:
+        return
+    
+    if not cmds.objExists(set_name):
+        cmds.select(cl=True)
+        cmds.sets(name=set_name)
+    
+    cmds.sets(obj, add=set_name)

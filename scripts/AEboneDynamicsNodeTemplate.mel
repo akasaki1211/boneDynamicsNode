@@ -58,12 +58,15 @@ global proc AEboneDynamicsNodeTemplate(string $nodeName)
             editorTemplate -endLayout;
 
             editorTemplate -beginLayout "Collisions" -collapse true;
+                editorTemplate -addControl "rootRadius";
                 editorTemplate -addControl "radius";
+                editorTemplate -label "Bone as Capsule (*Experimental)" -addControl "boneAsCapsule";
                 editorTemplate -addControl "iterations";
                 editorTemplate -addControl "enableGroundCol";
                 editorTemplate -addControl "groundHeight";
                 editorTemplate -addControl "sphereCollider";
                 editorTemplate -addControl "capsuleCollider";
+                editorTemplate -addControl "capsuleColliderInput";
                 editorTemplate -addControl "infinitePlaneCollider";
                 editorTemplate -label "Mesh Collider (*Experimental)" -addControl "meshCollider";
                 editorTemplate -addControl "meshColCutoff";

@@ -3,20 +3,12 @@
 // Disabled min/max macros in Windows API
 #define NOMINMAX  
 
+#include "boneDynamicsUtils.h"
+
 #include <maya/MPxNode.h>
 #include <maya/MTypeId.h>
-#include <maya/MFnNumericAttribute.h>
-#include <maya/MFnCompoundAttribute.h>
-#include <maya/MFnMatrixAttribute.h>
-#include <maya/MFnUnitAttribute.h>
-#include <maya/MFnTypedAttribute.h>
-#include <maya/MFnEnumAttribute.h>
-#include <maya/MFnMesh.h>
-#include <maya/MTime.h>
-#include <maya/MVector.h>
-#include <maya/MPoint.h>
 #include <maya/MMatrix.h>
-#include <maya/MTransformationMatrix.h>
+#include <maya/MVector.h>
 #include <maya/MQuaternion.h>
 #include <maya/MEulerRotation.h>
 
@@ -74,15 +66,17 @@ public:
     static MObject s_enableTurbulence;
     static MObject s_turbulenceSeed;
     static MObject s_turbulenceStrength;
-    static MObject m_turbulenceVectorChangeScale;  // rate of change of the change-vector
-    static MObject m_turbulenceVectorChangeMax;    // max value of the change-vector
+    static MObject s_turbulenceVectorChangeScale;  // rate of change of the change-vector
+    static MObject s_turbulenceVectorChangeMax;    // max value of the change-vector
 
     // angle limit
     static MObject s_enableAngleLimit;  // use angle limit
     static MObject s_angleLimit;        // angle limit
 
     // radius
+    static MObject s_rootRadius;        // radius at the root (used when boneAsCapsule is true)
     static MObject s_radius;            // radius
+    static MObject s_boneAsCapsule;     // bone collision detection as a capsule
 
     // iterations
     static MObject s_iterations;        // iterations of constraints
@@ -95,11 +89,19 @@ public:
     static MObject s_sphereColMtx;      // sphereCollider matrix
     static MObject s_sphereColRad;      // sphereCollider radius
 
+    // (legacy) Using two matrices
     static MObject s_capsuleCollider;   // capsuleCollider array
     static MObject s_capsuleColMtxA;    // capsuleCollider matrix A
     static MObject s_capsuleColMtxB;    // capsuleCollider matrix B
     static MObject s_capsuleColRadA;    // capsuleCollider radius A
     static MObject s_capsuleColRadB;    // capsuleCollider radius B
+
+    // Using one center matrix and height
+    static MObject s_capsuleColliderInput;   // capsuleCollider array
+    static MObject s_capsuleColliderMatrix;  // capsuleCollider matrix
+    static MObject s_capsuleColliderHeight;  // capsuleCollider height
+    static MObject s_capsuleColliderRadiusA; // capsuleCollider radius A
+    static MObject s_capsuleColliderRadiusB; // capsuleCollider radius B
 
     static MObject s_iPlaneCollider;    // infinitePlaneCollider array
     static MObject s_iPlaneColMtx;      // infinitePlaneCollider matrix
@@ -111,25 +113,47 @@ public:
     static MObject s_outputRotate;       // output euler rotation
 
 private:
-    //static double getFPS();
-    double degToRad(double deg);
-    void angleLimit(const MVector& pivot, const MVector& a, MVector& b, const double limitAngle);
-    void distanceConstraint(const MVector& pivot, MVector& point, double distance);
-    void getClosestPoint(const MObject& mesh, const MPoint& position, MPoint& closestPoint, MVector& closestNormal);
-    
-    inline uint32_t rotl(const uint32_t x, int k);
-    double rand_double(const double scale);
+    struct InitialPoseData : public boneDynamicsUtils::PoseData
+    {
+        // Inherits from boneDynamicsUtils::PoseData
 
-    static const MEulerRotation::RotationOrder ROTATION_ORDER = MEulerRotation::RotationOrder::kXYZ;
+        MMatrix offsetMatrix;
+        double offsetMatrixWeight;
+    };
+
+    InitialPoseData buildInitialPoseData(MDataBlock& data) const;
+
+    struct DynamicsParameters
+    {
+        double damping;
+        double elasticity;
+        short elasticForceFunction;
+        double stiffness;
+        double mass;
+        MVector gravity;
+        double gravityMultiply;
+        
+        MVector additionalForce;
+        double additionalForceScale;
+        bool enableTurbulence;
+        int turbulenceSeed;
+        double turbulenceStrength;
+        double turbulenceVectorChangeScale;
+        double turbulenceVectorChangeMax;
+    };
+
+    DynamicsParameters getDynamicsParameters(MDataBlock& data) const;
     
-    bool m_init;
+    // simulate state
+    bool m_isSimulationInitialized;
     MMatrix m_prevOffsetMatrix;
     MVector m_position;
     MVector m_velocity;
 
+    // turbulence state
     int m_lastSeed;
     int m_lastFrame;
-    uint32_t m_rngState[4];
+    std::uint32_t m_rngState[4];
     MVector m_turbulenceVector;       // turbulence vector
     MVector m_turbulenceVectorChange; // vector that changes the turbulenceVector
 };

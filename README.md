@@ -4,12 +4,15 @@
 
 **boneDynamicsNode** is a custom node for Autodesk Maya that enables dynamic simulation on joint chains. It is designed for easy integration into rigs, this node supports features such as collision handling, angle limits, target pose manipulation, and more.
 
-> ⚠ **Warning**: Internal Use ID `0x7b001` is used.
+> ⚠️ **Warning**: This plug-in uses internal-use Maya node IDs:  
+> `0x7b001`, `0x7b002`, `0x7b003`, `0x7b004`, and `0x7b009`.  
 
 ## ✨ Features
 
 - Simple integration with standard Maya joints
 - Multiple collision types supported (sphere, capsule, infinite plane, ground, mesh)
+- Dedicated collider nodes and visualizer node
+- Python helper package for scripted setup
 - Angle limitation
 - Specify target pose
 - Cancel transforms of specific nodes
@@ -17,13 +20,22 @@
 - Turbulent wind
 - Support for branching structures
 
-## 🔧 Quick Installation
+## 🔧 Installation
 
-1. Download the appropriate `boneDynamicsNode.mll` for the Maya version from the [Releases page](https://github.com/akasaki1211/boneDynamicsNode/releases) or from [Pre-built plug-ins](#-pre-built-plug-ins).
-2. Copy it to `C:\Users\<USERNAME>\Documents\maya\<MAYAVERSION>\plug-ins`.
-3. Load `boneDynamicsNode.mll` using Maya's Plug-in Manager.
+1. Download the appropriate `boneDynamicsNode.mll` for the Maya version from [Pre-built plug-ins](#-pre-built-plug-ins).  
+2. Copy `boneDynamicsNode.mll` to `C:\Users\<USERNAME>\Documents\maya\<MAYAVERSION>\plug-ins`.  
+3. Copy [`scripts`](./scripts) into `C:\Users\<USERNAME>\Documents\maya`.  
+   This installs both the `bdn` Python helper package and `AEboneDynamicsNodeTemplate.mel`.  
+
+The `bdn` helper package loads `boneDynamicsNode.mll` automatically when needed.  
 
 For additional instructions, refer to the [Installation](https://github.com/akasaki1211/boneDynamicsNode/wiki/Installation) wiki page.
+
+## 🖥️ Platform Status
+
+- **Windows:** Developed and tested on Windows. Pre-built plug-ins are provided for Windows.
+- **Linux:** Build verified under WSL. Runtime testing in Maya on Linux has not been performed.
+- **macOS:** Not tested.
 
 ## 🚀 Try it out
 
@@ -32,20 +44,12 @@ Please try running the following script. It creates a single-section joint with 
 ```python
 from maya import cmds
 
-cmds.loadPlugin("boneDynamicsNode.mll", qt=True)
-
 cmds.select(cl=True)
 bon = cmds.joint(p=[0,0,0])
 end = cmds.joint(p=[10,0,0])
 
-bd_node = cmds.createNode("boneDynamicsNode")
-cmds.connectAttr('time1.outTime', f'{bd_node}.time', f=True)
-cmds.connectAttr(f'{bon}.translate', f'{bd_node}.boneTranslate', f=True)
-cmds.connectAttr(f'{bon}.parentMatrix[0]', f'{bd_node}.boneParentMatrix', f=True)
-cmds.connectAttr(f'{bon}.parentInverseMatrix[0]', f'{bd_node}.boneParentInverseMatrix', f=True)
-cmds.connectAttr(f'{bon}.jointOrient', f'{bd_node}.boneJointOrient', f=True)
-cmds.connectAttr(f'{end}.translate', f'{bd_node}.endTranslate', f=True)
-cmds.connectAttr(f'{bd_node}.outputRotate', f'{bon}.rotate', f=True)
+import bdn
+bdn.create_dynamics_node(bon, end)
 
 cmds.currentTime(1)
 cmds.select(bon)
