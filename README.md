@@ -67,6 +67,7 @@ Full documentation is available in the [wiki](https://github.com/akasaki1211/bon
 - [Quick Start](https://github.com/akasaki1211/boneDynamicsNode/wiki/Quick-Start)
 - [Basic Usage](https://github.com/akasaki1211/boneDynamicsNode/wiki/Basic-Usage)
 - [Dynamics Parameters](https://github.com/akasaki1211/boneDynamicsNode/wiki/Dynamics-Parameters)
+- [Visualizer](https://github.com/akasaki1211/boneDynamicsNode/wiki/Visualizer)
 - [Collision Guide](https://github.com/akasaki1211/boneDynamicsNode/wiki/Collision-Guide)
 - [Advanced Features](https://github.com/akasaki1211/boneDynamicsNode/wiki/Advanced-Features)
 - [Practical Examples](https://github.com/akasaki1211/boneDynamicsNode/wiki/Practical-Examples)
