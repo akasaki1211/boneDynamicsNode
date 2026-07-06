@@ -22,12 +22,13 @@
 
 ## 🔧 Installation
 
-1. Download the appropriate `boneDynamicsNode.mll` for the Maya version from [Pre-built plug-ins](#-pre-built-plug-ins).  
-2. Copy `boneDynamicsNode.mll` to `C:\Users\<USERNAME>\Documents\maya\<MAYAVERSION>\plug-ins`.  
-3. Copy [`scripts`](./scripts) into `C:\Users\<USERNAME>\Documents\maya`.  
-   This installs both the `bdn` Python helper package and `AEboneDynamicsNodeTemplate.mel`.  
+Download the release zip from the [Releases page](https://github.com/akasaki1211/boneDynamicsNode/releases).
 
-The `bdn` helper package loads `boneDynamicsNode.mll` automatically when needed.  
+After extracting the zip file:
+
+1. Copy the `boneDynamicsNode.mll` to `C:\Users\<USERNAME>\Documents\maya\<MAYAVERSION>\plug-ins`.
+2. Copy the `scripts` folder to `C:\Users\<USERNAME>\Documents\maya`.  
+   - The `scripts` folder installs the `bdn` Python helper package and `AEboneDynamicsNodeTemplate.mel`.
 
 For additional instructions, refer to the [Installation](https://github.com/akasaki1211/boneDynamicsNode/wiki/Installation) wiki page.
 
@@ -74,15 +75,17 @@ Full documentation is available in the [wiki](https://github.com/akasaki1211/bon
 - [FAQ & Troubleshooting](https://github.com/akasaki1211/boneDynamicsNode/wiki/FAQ-&-Troubleshooting)
 - [Change Log](https://github.com/akasaki1211/boneDynamicsNode/wiki/Change-Log)
 
-## 📦 Pre-built plug-ins
+## 📦 Individual Plug-ins
 
-Pre-built `boneDynamicsNode.mll` in the [plug-ins](./plug-ins) directory. Install to the appropriate Maya version and ready to use.  
+If you only need to open and evaluate scenes that are already set up with boneDynamicsNode, the main `.mll` plug-in file is enough. Pre-built `boneDynamicsNode.mll` in the [plug-ins](./plug-ins) directory. Install to the appropriate Maya version.
 
-|Version|Plug-in<br>(*Click on "Download raw file" at the link.)|
-|---|---|
-|Maya 2022 Update 5 win64|[Download](./plug-ins/2022/boneDynamicsNode.mll)|
-|Maya 2023 Update 3 win64|[Download](./plug-ins/2023/boneDynamicsNode.mll)|
-|Maya 2024 Update 2 win64|[Download](./plug-ins/2024/boneDynamicsNode.mll)|
-|Maya 2025 Update 3 win64|[Download](./plug-ins/2025/boneDynamicsNode.mll)|
-|Maya 2026 Update 3 win64|[Download](./plug-ins/2026/boneDynamicsNode.mll)|
-|Maya 2027 Update 1 win64|[Download](./plug-ins/2027/boneDynamicsNode.mll)|
+**Click on "Download raw file" at the link.**
+
+- [Maya 2022 Update 5 Win64](./plug-ins/2022/boneDynamicsNode.mll)
+- [Maya 2023 Update 3 Win64](./plug-ins/2023/boneDynamicsNode.mll)
+- [Maya 2024 Update 2 Win64](./plug-ins/2024/boneDynamicsNode.mll)
+- [Maya 2025 Update 3 Win64](./plug-ins/2025/boneDynamicsNode.mll)
+- [Maya 2026 Update 3 Win64](./plug-ins/2026/boneDynamicsNode.mll)
+- [Maya 2027 Update 1 Win64](./plug-ins/2027/boneDynamicsNode.mll)
+
+> If you intend to perform a new setup using the `bdn` Python helper package or utilize Attribute Editor templates, please follow the installation instructions provided in the [Installation](#-installation) section.
