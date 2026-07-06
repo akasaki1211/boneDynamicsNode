@@ -2,7 +2,7 @@
 
 ![Maya](https://img.shields.io/static/v1?message=Maya&color=0696D7&logo=Autodesk&logoColor=white&label=) ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 
-**boneDynamicsNode** is a custom node for Autodesk Maya that enables dynamic simulation on joint chains. It is designed for easy integration into rigs, this node supports features such as collision handling, angle limits, target pose manipulation, and more.
+**boneDynamicsNode** is a custom node for Autodesk Maya that enables dynamic simulation on joint chains. It is designed for easy integration into rigs and supports features such as collision handling, angle limits, target pose manipulation, and more.
 
 > ⚠️ **Warning**: This plug-in uses internal-use Maya node IDs:  
 > `0x7b001`, `0x7b002`, `0x7b003`, `0x7b004`, and `0x7b009`.  
@@ -10,13 +10,13 @@
 ## ✨ Features
 
 - Simple integration with standard Maya joints
-- Multiple collision types supported (sphere, capsule, infinite plane, ground, mesh)
+- Multiple collision types: sphere, capsule, infinite plane, ground, and mesh
 - Dedicated collider nodes and visualizer node
 - Python helper package for scripted setup
-- Angle limitation
-- Specify target pose
-- Cancel transforms of specific nodes
-- Per-section scaling capability
+- Angle limits
+- Target pose control
+- Transform cancellation for specific nodes
+- Per-section scaling
 - Turbulent wind
 - Support for branching structures
 
@@ -90,4 +90,4 @@ Pre-built `boneDynamicsNode.mll` files are available in the [plug-ins](./plug-in
 - [Maya 2026 Update 3 Win64](./plug-ins/2026/boneDynamicsNode.mll)
 - [Maya 2027 Update 1 Win64](./plug-ins/2027/boneDynamicsNode.mll)
 
-> If you intend to perform a new setup using the `bdn` Python helper package or utilize Attribute Editor templates, please follow the installation instructions provided in the [Installation](#-installation) section.
+> If you want to create new setups using the `bdn` Python helper package or use the Attribute Editor template, follow the instructions in the [Installation](#-installation) section.
