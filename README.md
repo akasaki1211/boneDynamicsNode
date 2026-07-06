@@ -26,7 +26,7 @@ Download the release zip from the [Releases page](https://github.com/akasaki1211
 
 After extracting the zip file:
 
-1. Copy the `boneDynamicsNode.mll` to `C:\Users\<USERNAME>\Documents\maya\<MAYAVERSION>\plug-ins`.
+1. Copy the `boneDynamicsNode.mll` file for your Maya version from the `plug-ins` folder to `C:\Users\<USERNAME>\Documents\maya\<MAYAVERSION>\plug-ins`.
 2. Copy the `scripts` folder to `C:\Users\<USERNAME>\Documents\maya`.  
    - The `scripts` folder installs the `bdn` Python helper package and `AEboneDynamicsNodeTemplate.mel`.
 
@@ -77,9 +77,11 @@ Full documentation is available in the [wiki](https://github.com/akasaki1211/bon
 
 ## 📦 Individual Plug-ins
 
-If you only need to open and evaluate scenes that are already set up with boneDynamicsNode, the main `.mll` plug-in file is enough. Pre-built `boneDynamicsNode.mll` in the [plug-ins](./plug-ins) directory. Install to the appropriate Maya version.
+If you only need to open and evaluate scenes that are already set up with boneDynamicsNode, the main `.mll` plug-in file is enough.
 
-**Click on "Download raw file" at the link.**
+Pre-built `boneDynamicsNode.mll` files are available in the [plug-ins](./plug-ins) directory. Download the file that matches your Maya version and place it in your Maya plug-ins path.
+
+**Click "Download raw file" from the linked file page.**
 
 - [Maya 2022 Update 5 Win64](./plug-ins/2022/boneDynamicsNode.mll)
 - [Maya 2023 Update 3 Win64](./plug-ins/2023/boneDynamicsNode.mll)
