@@ -63,6 +63,13 @@ def get_fps(*args) -> float:
     return fps_mapping.get(time_unit, 30.0)
 
 
+def connect_attr(source: str, destination: str, *args) -> None:
+    connected_source = cmds.connectionInfo(destination, sfd=True)
+    if source == connected_source:
+        return
+    cmds.connectAttr(source, destination, f=True)
+
+
 def create_shape_node(node_name: str, *args) -> Tuple[str, str]:
     
     def _unique_name(name):

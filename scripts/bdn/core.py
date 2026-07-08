@@ -5,6 +5,16 @@ from maya import cmds
 from . import utils, collider, visualize
 
 
+def _find_connected_dynamics_node(bone: str, *args) -> Optional[str]:
+    connected_nodes = []
+    for attr in ['rotate', 'rotateX', 'rotateY', 'rotateZ']:
+        nodes = cmds.listConnections(f'{bone}.{attr}', s=True, d=False, type='boneDynamicsNode') or []
+        for node in nodes:
+            if node not in connected_nodes:
+                connected_nodes.append(node)
+    return connected_nodes[0] if connected_nodes else None
+
+
 @utils.with_traceback
 @utils.undo_chunk
 def create_dynamics_node(
@@ -62,35 +72,39 @@ def create_dynamics_node(
     if bone_path not in end_parents:
         raise ValueError(f"Exit: {bone} is not {end}'s parent.")
     
-    # create boneDynamicsNode and set attributes
-    bone_dynamics_node = cmds.createNode("boneDynamicsNode")
+    # create or find existing boneDynamicsNode
+    bone_dynamics_node = _find_connected_dynamics_node(bone)
+    if bone_dynamics_node is None:
+        bone_dynamics_node = cmds.createNode("boneDynamicsNode")
+
+    # set attributes
     attributes = dict(kwargs)
     if 'fps' not in attributes:
         attributes['fps'] = utils.get_fps()
     utils.set_attributes(bone_dynamics_node, **attributes)
 
     # basic connections
-    cmds.connectAttr('time1.outTime', f'{bone_dynamics_node}.time', f=True)
-    cmds.connectAttr(f'{bone}.translate', f'{bone_dynamics_node}.boneTranslate', f=True)
-    cmds.connectAttr(f'{bone}.parentMatrix[0]', f'{bone_dynamics_node}.boneParentMatrix', f=True)
-    cmds.connectAttr(f'{bone}.parentInverseMatrix[0]', f'{bone_dynamics_node}.boneParentInverseMatrix', f=True)
-    cmds.connectAttr(f'{bone}.jointOrient', f'{bone_dynamics_node}.boneJointOrient', f=True)
-    cmds.connectAttr(f'{end}.translate', f'{bone_dynamics_node}.endTranslate', f=True)
-    cmds.connectAttr(f'{bone_dynamics_node}.outputRotate', f'{bone}.rotate', f=True)
+    utils.connect_attr('time1.outTime', f'{bone_dynamics_node}.time')
+    utils.connect_attr(f'{bone}.translate', f'{bone_dynamics_node}.boneTranslate')
+    utils.connect_attr(f'{bone}.parentMatrix[0]', f'{bone_dynamics_node}.boneParentMatrix')
+    utils.connect_attr(f'{bone}.parentInverseMatrix[0]', f'{bone_dynamics_node}.boneParentInverseMatrix')
+    utils.connect_attr(f'{bone}.jointOrient', f'{bone_dynamics_node}.boneJointOrient')
+    utils.connect_attr(f'{end}.translate', f'{bone_dynamics_node}.endTranslate')
+    utils.connect_attr(f'{bone_dynamics_node}.outputRotate', f'{bone}.rotate')
 
     if scalable:
-        cmds.connectAttr(f'{bone}.scale', f'{bone_dynamics_node}.boneScale', f=True)
-        cmds.connectAttr(f'{bone}.inverseScale', f'{bone_dynamics_node}.boneInverseScale', f=True)
-        cmds.connectAttr(f'{end}.scale', f'{bone_dynamics_node}.endScale', f=True)
+        utils.connect_attr(f'{bone}.scale', f'{bone_dynamics_node}.boneScale')
+        utils.connect_attr(f'{bone}.inverseScale', f'{bone_dynamics_node}.boneInverseScale')
+        utils.connect_attr(f'{end}.scale', f'{bone_dynamics_node}.endScale')
 
     # additional connections
     if target_bone and cmds.objExists(target_bone):
-        cmds.connectAttr(f'{target_bone}.rotate', f'{bone_dynamics_node}.rotationOffset', f=True)
+        utils.connect_attr(f'{target_bone}.rotate', f'{bone_dynamics_node}.rotationOffset')
         if connect_target_scale:
-            cmds.connectAttr(f'{target_bone}.scale', f'{bone}.scale', f=True)
+            utils.connect_attr(f'{target_bone}.scale', f'{bone}.scale')
 
     if offset_node and cmds.objExists(offset_node):
-        cmds.connectAttr(f'{offset_node}.worldMatrix[0]', f'{bone_dynamics_node}.offsetMatrix', f=True)
+        utils.connect_attr(f'{offset_node}.worldMatrix[0]', f'{bone_dynamics_node}.offsetMatrix')
 
     if additional_force_node and cmds.objExists(additional_force_node):
         vp = cmds.listConnections(f'{additional_force_node}.worldMatrix[0]', s=False, d=True, type='vectorProduct')
@@ -104,8 +118,8 @@ def create_dynamics_node(
                 "normalizeOutput": 1,
             }
             utils.set_attributes(vp, **attrs)
-            cmds.connectAttr(f'{additional_force_node}.worldMatrix[0]', f'{vp}.matrix', f=True)
-        cmds.connectAttr(f'{vp}.output', f'{bone_dynamics_node}.additionalForce', f=True)
+            utils.connect_attr(f'{additional_force_node}.worldMatrix[0]', f'{vp}.matrix')
+        utils.connect_attr(f'{vp}.output', f'{bone_dynamics_node}.additionalForce')
     
     # visualizer
     if create_visualizer:
