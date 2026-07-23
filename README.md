@@ -4,7 +4,8 @@
 
 **boneDynamicsNode** is a custom node for Autodesk Maya that enables dynamic simulation on joint chains. It is designed for easy integration into rigs and supports features such as collision handling, angle limits, target pose manipulation, and more.
 
-> ⚠️ **Warning**: This plug-in uses internal-use Maya node IDs:  
+> [!WARNING]
+> This plug-in uses internal-use Maya node IDs:  
 > `0x7b001`, `0x7b002`, `0x7b003`, `0x7b004`, and `0x7b009`.  
 
 ## ✨ Features
@@ -56,6 +57,7 @@ cmds.currentTime(1)
 cmds.select(bon)
 ```
 
+> [!IMPORTANT]
 > Please set "Playback speed" to **Play every frame**.
 
 Refer to [Quick Start](https://github.com/akasaki1211/boneDynamicsNode/wiki/Quick-Start) and [Basic Usage](https://github.com/akasaki1211/boneDynamicsNode/wiki/Basic-Usage) for details.
@@ -90,4 +92,4 @@ Pre-built `boneDynamicsNode.mll` files are available in the [plug-ins](./plug-in
 - [Maya 2026 Update 3 Win64](./plug-ins/2026/boneDynamicsNode.mll)
 - [Maya 2027 Update 1 Win64](./plug-ins/2027/boneDynamicsNode.mll)
 
-> If you want to create new setups using the `bdn` Python helper package or use the Attribute Editor template, follow the instructions in the [Installation](#-installation) section.
+If you want to create new setups using the `bdn` Python helper package or use the Attribute Editor template, follow the instructions in the [Installation](#-installation) section.
