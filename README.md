@@ -77,6 +77,14 @@ Full documentation is available in the [wiki](https://github.com/akasaki1211/bon
 - [FAQ & Troubleshooting](https://github.com/akasaki1211/boneDynamicsNode/wiki/FAQ-&-Troubleshooting)
 - [Change Log](https://github.com/akasaki1211/boneDynamicsNode/wiki/Change-Log)
 
+## 🧰 Third-party Tools
+
+Several third-party tools have been created for working with boneDynamicsNode.
+Many thanks to the developers for creating and sharing these tools!
+
+- [nkBdnEditor](https://github.com/imaoki/nkBdnEditor) by [imaoki](https://x.com/imaoki344541)
+- [G3DSetupBoneDynamics](https://booth.pm/ja/items/8704160) by [GACCHI](https://x.com/GACCHI_3DCG)
+
 ## 📦 Individual Plug-ins
 
 If you only need to open and evaluate scenes that are already set up with boneDynamicsNode, the main `.mll` plug-in file is enough.
