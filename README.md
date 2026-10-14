@@ -83,7 +83,8 @@ Several third-party tools have been created for working with boneDynamicsNode.
 Many thanks to the developers for creating and sharing these tools!
 
 - [nkBdnEditor](https://github.com/imaoki/nkBdnEditor) by [imaoki](https://x.com/imaoki344541)
-- [G3DSetupBoneDynamics](https://booth.pm/ja/items/8704160) by [GACCHI](https://x.com/GACCHI_3DCG)
+- [G3DSetupBoneDynamics](https://booth.pm/ja/items/8704160) by [GACCHI](https://x.com/GACCHI_3DCG) [[Documentation](https://aquamarine-waiter-811.notion.site/G3DSetupBoneDynamics-3a88cd6b6db480759319d182816c5430)]
+- [mGear Spring Manager](https://github.com/mgear-dev/mgear/releases/tag/5.4.0) (mGear 5.4.0+) by [mGear Framework](https://x.com/mGear_Framework) - as a solver backend. [[Documentation](https://mgear4.readthedocs.io/en/master/animbitsUserDocumentation.html#bone-dynamics-optional)]
 
 ## 📦 Individual Plug-ins
 
