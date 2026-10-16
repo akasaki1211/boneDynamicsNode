@@ -137,6 +137,12 @@ def set_override_display_type(node: str, type: str, *args) -> None:
     cmds.setAttr(f'{node}.overrideDisplayType', display_type)
 
 
+def set_inherits_transform(node: str, enabled: bool, *args) -> None:
+    cmds.setAttr(f'{node}.inheritsTransform', enabled)
+    if not enabled:
+        cmds.makeIdentity(node, apply=False)
+
+
 def add_object_to_set(obj: str, set_name: str, *args) -> None:
     
     if not set_name:

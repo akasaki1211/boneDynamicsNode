@@ -51,6 +51,7 @@ def create_visualizer(bone_dynamics_node: str, **kwargs):
         visualizer_tm, visualizer_shape = utils.create_shape_node('boneDynamicsVisualizer')
     
     utils.set_outliner_color(visualizer_tm, (0, .5, 1))
+    utils.set_inherits_transform(visualizer_tm, False)
     utils.set_override_display_type(visualizer_shape, type='Reference')
     utils.set_attributes(visualizer_shape, **kwargs)
 
