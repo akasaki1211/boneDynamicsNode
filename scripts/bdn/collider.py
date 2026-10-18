@@ -219,6 +219,7 @@ def connect_colliders(
         if is_found:
             continue
 
+        # [Begin] support for expcol colliders -----------------------------------------
         # expcol-type colliders
         if cmds.attributeQuery('colliderType', n=col, ex=True):
             # get expCol's collider type
@@ -244,6 +245,7 @@ def connect_colliders(
             elif collider_type == 'infinitePlane':
                 connector.connect_infinite_plane(f'{col}.worldMatrix[0]')
                 is_found = True
+        # [End] support for expcol colliders -------------------------------------------
 
         if not is_found:
             print(f"Skip: {col} is not a supported collider type.")
