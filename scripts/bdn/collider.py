@@ -136,6 +136,7 @@ class _ColliderConnector:
         cmds.connectAttr(radius_b_attr, f'{self.bone_dynamics_node}.capsuleColliderInput[{self.capsule_col_input_idx}].capsuleColliderRadiusB', f=True)
         self.capsule_col_input_idx += 1
 
+    # unused
     def connect_capsule(self, matrix_a_attr: str, matrix_b_attr: str, radius_a_attr: str, radius_b_attr: str) -> None:
         cmds.connectAttr(matrix_a_attr, f'{self.bone_dynamics_node}.capsuleCollider[{self.capsule_col_idx}].capsuleColMatrixA', f=True)
         cmds.connectAttr(matrix_b_attr, f'{self.bone_dynamics_node}.capsuleCollider[{self.capsule_col_idx}].capsuleColMatrixB', f=True)
@@ -232,14 +233,7 @@ def connect_colliders(
             elif collider_type in ['capsule', 'capsule2']:
                 ra = ".radius" if collider_type == 'capsule' else ".radiusA"
                 rb = ".radius" if collider_type == 'capsule' else ".radiusB"
-                a = cmds.listConnections(f'{col}.sphereA', s=True, d=False) or []
-                b = cmds.listConnections(f'{col}.sphereB', s=True, d=False) or []
-                if not a or not b:
-                    print(f"Skip: {col} capsule collider is missing sphereA or sphereB connection.")
-                    continue
-                a = a[0]
-                b = b[0]
-                connector.connect_capsule(f'{a}.worldMatrix[0]', f'{b}.worldMatrix[0]', f'{col}{ra}', f'{col}{rb}')
+                connector.connect_capsule_input(f'{col}.worldMatrix[0]', f'{col}.height', f'{col}{ra}', f'{col}{rb}')
                 is_found = True
             
             elif collider_type == 'infinitePlane':
