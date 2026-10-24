@@ -63,6 +63,13 @@ def get_fps(*args) -> float:
     return fps_mapping.get(time_unit, 30.0)
 
 
+def connect_attr(source: str, destination: str, *args) -> None:
+    connected_source = cmds.connectionInfo(destination, sfd=True)
+    if source == connected_source:
+        return
+    cmds.connectAttr(source, destination, f=True)
+
+
 def create_shape_node(node_name: str, *args) -> Tuple[str, str]:
     
     def _unique_name(name):
@@ -128,6 +135,12 @@ def set_override_display_type(node: str, type: str, *args) -> None:
 
     set_override_display_color(node, 0)
     cmds.setAttr(f'{node}.overrideDisplayType', display_type)
+
+
+def set_inherits_transform(node: str, enabled: bool, *args) -> None:
+    cmds.setAttr(f'{node}.inheritsTransform', enabled)
+    if not enabled:
+        cmds.makeIdentity(node, apply=False)
 
 
 def add_object_to_set(obj: str, set_name: str, *args) -> None:
