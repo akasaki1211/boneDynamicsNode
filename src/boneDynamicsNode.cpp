@@ -21,6 +21,7 @@
 namespace
 {
     constexpr double kCapsuleMinThreshold = 0.1;
+    constexpr double kReferenceFPS = 30.0;
 
     /*double getFPS()
     {
@@ -938,7 +939,8 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     m_position = MVector(offsetedPosition) * initialPose.offsetMatrixWeight + m_position * (1.0 - initialPose.offsetMatrixWeight);
     
     // velocity damping
-    m_velocity *= (1.0 - dynamicsParams.damping);
+    const double dampingFactor = std::pow(1.0 - dynamicsParams.damping, kReferenceFPS * dt);
+    m_velocity *= dampingFactor;
     
     // add velocity
     MVector nextPosition = m_position + (m_velocity * dt);
@@ -1018,7 +1020,8 @@ MStatus boneDynamicsNode::compute(const MPlug& plug, MDataBlock& data)
     nextPosition += externalForce * dt2;
     
     // apply stiffness
-    nextPosition += (m_position - nextPosition) * dynamicsParams.stiffness;
+    const double stiffnessFactor = std::pow(1.0 - dynamicsParams.stiffness, kReferenceFPS * dt);
+    nextPosition = m_position + (nextPosition - m_position) * stiffnessFactor;
 
     // angle limit
     const bool enableAngleLimit = data.inputValue(s_enableAngleLimit).asBool();
