@@ -33,9 +33,9 @@ def with_traceback(func):
 # utils
 def load_plugin(*args) -> bool:
     try:
-        result = cmds.loadPlugin("boneDynamicsNode.mll", qt=True)
+        result = cmds.loadPlugin("boneDynamicsNode", qt=True)
         if result is not None:
-            plugin_ver = cmds.pluginInfo("boneDynamicsNode.mll", q=True, version=True)
+            plugin_ver = cmds.pluginInfo("boneDynamicsNode", q=True, version=True)
             print(f"Plugin loaded successfully. Version: {plugin_ver}")
         return True
     except Exception as e:
