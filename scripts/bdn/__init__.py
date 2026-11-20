@@ -8,7 +8,7 @@ from .collider import (
     connect_colliders,
     disconnect_colliders,
 )
-from .visualize import create_visualizer
+from .visualize import create_visualizer, get_visualizer
 
 __all__ = [
     '__version__',
@@ -19,4 +19,5 @@ __all__ = [
     'connect_colliders',
     'disconnect_colliders',
     'create_visualizer',
+    'get_visualizer',
 ]

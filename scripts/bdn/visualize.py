@@ -22,6 +22,17 @@ def _find_visualizer(bone_dynamics_node: str, *args):
     return None, None
 
 
+@utils.with_traceback
+def get_visualizer(bone_dynamics_node: str):
+    """Find the viewport visualizer connected to a boneDynamicsNode.
+
+    Returns:
+        A tuple containing the visualizer transform and shape names, or
+        ``(None, None)`` if no visualizer is connected.
+    """
+    return _find_visualizer(bone_dynamics_node)
+
+
 def _connect_attr(source: str, destination: str, *args) -> None:
     connected_sources = cmds.listConnections(destination, s=True, d=False, p=True) or []
     if source in connected_sources:
